@@ -1,0 +1,18 @@
+.DS_Store
+.idea
+
+vendor
+temp
+*.log
+
+.env
+.vscode/
+**/__debug*
+
+#remove logs
+logs/layer/service.log
+
+
+#remove additional data
+cli/input.json
+cli/config.json
