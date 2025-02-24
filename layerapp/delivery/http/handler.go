@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"roham/layerapp/service/layer"
 
-	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/labstack/echo/v4"
 )
 
@@ -21,7 +20,7 @@ func NewHandler(LayerService layer.Service, logger *slog.Logger) Handler {
 	}
 }
 func (h Handler) healthCheck(c echo.Context) error {
-	check, err := h.LayerService.HealthCheckSrv(c)
+	check, err := h.LayerService.HealthCheckSrv(c.Request().Context())
 	if err != nil {
 		return c.JSON(http.StatusOK, echo.Map{
 			"message": "Service in Bad mood ):",
