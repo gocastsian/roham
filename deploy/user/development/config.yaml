@@ -1,0 +1,46 @@
+total_shutdown_timeout:
+  15s
+
+http_server:
+  port: 5001
+  cors:
+    allow_origins: "*"
+  shutdown_context_timeout: "10s"
+
+repository:
+  cache_prefix: user
+  cache_enabled: true
+
+cache_config:
+  ttl: "24h"
+  write_ttl: "10s"
+
+postgres_db:
+  host: user-db
+  port: 5432
+  user: "user_admin"
+  password: "password123"
+  db_name: user_db
+  ssl_mode: disable
+  max_idle_conns: 15
+  max_open_conns: 100
+  conn_max_lifetime: 5
+  path_of_migration: './userapp/repository/migrations'
+
+redis:
+  host: user-redis
+  Port: 6379
+
+logger:
+  file_path: "logs/user/service.log"
+  use_local_time: true
+  file_max_size_in_mb: 10
+  file_max_age_in_days: 7
+
+auth:
+  sign_key: "roham"
+  access_expiration_time: 30m
+  refresh_expiration_time: 50m
+  access_subject : "at_user"
+  refresh_subject : "rf_user"
+  context_key: "userInfo"
