@@ -1,0 +1,46 @@
+services:
+  user-db:
+    image: postgres:17.2-alpine
+    environment:
+      - 'POSTGRES_DB=user_db'
+      - 'POSTGRES_USER=user_admin'
+      - 'POSTGRES_PASSWORD=password123'
+    restart: always
+    profiles:
+      - user
+
+  user-redis:
+    image: redis:8.0-M03-alpine3.21
+    restart: always
+    command: redis-server --loglevel warning --protected-mode no --save "" --appendonly no
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    profiles:
+      - user
+
+  user-service:
+    build:
+      context: .
+      dockerfile: ./deploy/user/development/Dockerfile
+      args:
+        GO_IMAGE_NAME: ${GO_IMAGE_NAME}
+        GO_IMAGE_VERSION: ${GO_IMAGE_VERSION}
+    image: ${SERVICE_NAME}-user:${GO_IMAGE_NAME}-${GO_IMAGE_VERSION}
+    env_file:
+      - .env
+    entrypoint:
+      - air
+      - "-c"
+      - /home/app/.air/.air.user.toml
+    volumes:
+      - ./:/home/app
+    profiles:
+      - user
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.${SERVICE_NAME}_user.service=${SERVICE_NAME}_user"
+      - "traefik.http.routers.${SERVICE_NAME}_user.rule=Host(`${SERVICE_DOMAIN}`)&&PathPrefix(`/user`)"
+      - "traefik.http.routers.${SERVICE_NAME}_user.middlewares=${SERVICE_NAME}_strip_user"
+      - "traefik.http.routers.${SERVICE_NAME}_user.entrypoints=web"
+      - "traefik.http.services.${SERVICE_NAME}_user.loadbalancer.server.port=5001"
+      - "traefik.http.middlewares.${SERVICE_NAME}_strip_user.stripprefix.prefixes=/user"

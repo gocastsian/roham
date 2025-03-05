@@ -1,0 +1,9 @@
+services:
+  traefik:
+    image: traefik:v3.1.0
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - ./deploy/roham/development/traefik:/etc/traefik/
+      - /var/run/docker.sock:/var/run/docker.sock
