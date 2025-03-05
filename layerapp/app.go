@@ -9,7 +9,6 @@ import (
 	"sync"
 	"syscall"
 
-	"google.golang.org/grpc"
 	"roham/layerapp/delivery/http"
 	"roham/layerapp/repository"
 	"roham/layerapp/service/layer"
