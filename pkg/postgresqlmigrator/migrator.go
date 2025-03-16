@@ -26,8 +26,8 @@ func New(dbConfig postgresql.Config, path string) Migrator {
 
 func (m Migrator) Up() {
 
-	connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
-		m.dbConfig.User, m.dbConfig.Password, m.dbConfig.Host, m.dbConfig.Port, m.dbConfig.DBName)
+	connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s",
+		m.dbConfig.User, m.dbConfig.Password, m.dbConfig.Host, m.dbConfig.Port, m.dbConfig.DBName, m.dbConfig.SSLMode)
 
 	db, err := sql.Open(m.dialect, connStr)
 	if err != nil {

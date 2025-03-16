@@ -10,12 +10,11 @@ CREATE TABLE IF NOT EXISTS users (
     avatar TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
-    is_superuser BOOLEAN DEFAULT FALSE,
     is_active BOOLEAN DEFAULT TRUE,
     CONSTRAINT chk_birth_date CHECK (birth_date <= CURRENT_DATE)
     );
 
-CREATE INDEX idx_phone_number_customer ON customers(phone_number);
+CREATE INDEX idx_phone_number_user ON users(phone_number);
 
 -- +migrate StatementBegin
 CREATE OR REPLACE FUNCTION update_modified_column()
@@ -33,4 +32,4 @@ CREATE TRIGGER trigger_update_timestamp
 -- +migrate StatementEnd
 
 -- +migrate Down
-DROP TABLE IF EXISTS customers;
+DROP TABLE IF EXISTS users;

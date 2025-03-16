@@ -20,7 +20,7 @@ func NewHandler(userSrv user.Service) Handler {
 	}
 }
 
-func (h Handler) GetUser(c echo.Context) error {
+func (h Handler) GetAllUsers(c echo.Context) error {
 
 	res, err := h.UserService.GetAllUsers(c.Request().Context())
 	if err != nil {

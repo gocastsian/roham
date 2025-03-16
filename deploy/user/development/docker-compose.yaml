@@ -8,6 +8,8 @@ services:
     restart: always
     profiles:
       - user
+    ports:
+      - "5433:5432"
 
   user-redis:
     image: redis:8.0-M03-alpine3.21
@@ -21,7 +23,7 @@ services:
   user-service:
     build:
       context: .
-      dockerfile: ./deploy/user/development/Dockerfile
+      dockerfile: ./Dockerfile
       args:
         GO_IMAGE_NAME: ${GO_IMAGE_NAME}
         GO_IMAGE_VERSION: ${GO_IMAGE_VERSION}
@@ -39,8 +41,8 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.${SERVICE_NAME}_user.service=${SERVICE_NAME}_user"
-      - "traefik.http.routers.${SERVICE_NAME}_user.rule=Host(`${SERVICE_DOMAIN}`)&&PathPrefix(`/user`)"
+      - "traefik.http.routers.${SERVICE_NAME}_user.rule=Host(`${SERVICE_DOMAIN}`)&&PathPrefix(`/users`)"
       - "traefik.http.routers.${SERVICE_NAME}_user.middlewares=${SERVICE_NAME}_strip_user"
       - "traefik.http.routers.${SERVICE_NAME}_user.entrypoints=web"
       - "traefik.http.services.${SERVICE_NAME}_user.loadbalancer.server.port=5001"
-      - "traefik.http.middlewares.${SERVICE_NAME}_strip_user.stripprefix.prefixes=/user"
+      - "traefik.http.middlewares.${SERVICE_NAME}_strip_user.stripprefix.prefixes=/users"

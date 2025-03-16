@@ -25,21 +25,21 @@ func NewService(repo Repository, validator Validator, logger *slog.Logger) Servi
 	}
 }
 
-func (srv Service) GetAllUsers(ctx context.Context) (GetAllUserResponse, error) {
+func (srv Service) GetAllUsers(ctx context.Context) (GetAllUsersResponse, error) {
 
 	users, err := srv.repository.GetAllUsers(ctx)
 	if err != nil {
 		srv.logger.Error("user_GetAllUsers", err)
-		return GetAllUserResponse{}, errmsg.ErrorResponse{
+		return GetAllUsersResponse{}, errmsg.ErrorResponse{
 			Message: err.Error(),
 			Errors: map[string]interface{}{
 				"user_GetAllUsers": err.Error(),
 			},
 		}
 	}
-	responseUsers := make([]GetUserResponse, len(users))
+	responseUsers := make([]GetAllUsersItem, 0)
 	for _, user := range users {
-		responseUsers = append(responseUsers, GetUserResponse{
+		responseUsers = append(responseUsers, GetAllUsersItem{
 			ID:          user.ID,
 			Username:    user.Username,
 			FirstName:   user.FirstName,
@@ -52,5 +52,5 @@ func (srv Service) GetAllUsers(ctx context.Context) (GetAllUserResponse, error) 
 			UpdatedAt:   user.UpdatedAt,
 		})
 	}
-	return GetAllUserResponse{Users: responseUsers}, nil
+	return GetAllUsersResponse{Users: responseUsers}, nil
 }

@@ -6,7 +6,7 @@ import (
 	"roham/types"
 )
 
-type GetUserResponse struct {
+type GetAllUsersItem struct {
 	ID          types.ID  `json:"id"`
 	Username    string    `json:"username"`
 	FirstName   string    `json:"first_name"`
@@ -19,6 +19,6 @@ type GetUserResponse struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
-type GetAllUserResponse struct {
-	Users []GetUserResponse `json:"users"`
+type GetAllUsersResponse struct {
+	Users []GetAllUsersItem `json:"users"`
 }
