@@ -17,6 +17,5 @@ type User struct {
 	BirthDate   string    `json:"birth_date"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
-	IsSuperuser bool      `json:"is_superuser"`
 	IsActive    bool      `json:"is_active"`
 }

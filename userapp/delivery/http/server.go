@@ -37,5 +37,5 @@ func (s Server) RegisterRoutes() {
 	v1.GET("/health-check", s.healthCheck)
 
 	userGroup := v1.Group("/users")
-	userGroup.GET("/", s.Handler.GetUser)
+	userGroup.GET("/", s.Handler.GetAllUsers)
 }
