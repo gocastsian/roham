@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"roham/pkg/paginate"
+	"github.com/gocastsian/roham/pkg/paginate"
 )
 
 func TestWriteQuery(t *testing.T) {

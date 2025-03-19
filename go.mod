@@ -1,4 +1,4 @@
-module roham
+module github.com/gocastsian/roham
 
 go 1.24.0
 

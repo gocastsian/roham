@@ -3,8 +3,8 @@ package postgresqlmigrator
 import (
 	"database/sql"
 	"fmt"
+	"github.com/gocastsian/roham/pkg/postgresql"
 	"log"
-	"roham/pkg/postgresql"
 
 	_ "github.com/lib/pq"
 	"github.com/rubenv/sql-migrate"

@@ -2,8 +2,8 @@ package user
 
 import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
-	errmsg "roham/pkg/err_msg"
-	"roham/pkg/validator"
+	errmsg "github.com/gocastsian/roham/pkg/err_msg"
+	"github.com/gocastsian/roham/pkg/validator"
 )
 
 type ValidatorUserRepository interface {

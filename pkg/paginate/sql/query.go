@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"roham/pkg/paginate"
+	"github.com/gocastsian/roham/pkg/paginate"
 )
 
 var (

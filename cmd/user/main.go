@@ -6,12 +6,12 @@ import (
 	"os"
 	"path/filepath"
 
-	"roham/pkg/postgresqlmigrator"
-	"roham/userapp"
+	"github.com/gocastsian/roham/pkg/postgresqlmigrator"
+	"github.com/gocastsian/roham/userapp"
 
-	cfgloader "roham/pkg/cfg_loader"
-	"roham/pkg/logger"
-	"roham/pkg/postgresql"
+	cfgloader "github.com/gocastsian/roham/pkg/cfg_loader"
+	"github.com/gocastsian/roham/pkg/logger"
+	"github.com/gocastsian/roham/pkg/postgresql"
 )
 
 func main() {
