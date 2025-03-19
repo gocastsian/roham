@@ -1,9 +1,9 @@
 package echomiddleware
 
 import (
+	"github.com/gocastsian/roham/types"
 	"github.com/labstack/echo/v4"
 	"net/http"
-	"roham/types"
 )
 
 func AccessCheck(Roles []types.Role) echo.MiddlewareFunc {

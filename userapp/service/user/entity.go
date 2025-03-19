@@ -3,7 +3,7 @@ package user
 import (
 	"time"
 
-	"roham/types"
+	"github.com/gocastsian/roham/types"
 )
 
 type User struct {

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"roham/userapp/service/user"
+	"github.com/gocastsian/roham/userapp/service/user"
 )
 
 type Config struct {

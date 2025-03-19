@@ -9,11 +9,11 @@ import (
 	"sync"
 	"syscall"
 
-	httpserver "roham/pkg/http_server"
-	"roham/pkg/postgresql"
-	"roham/userapp/delivery/http"
-	"roham/userapp/repository"
-	"roham/userapp/service/user"
+	httpserver "github.com/gocastsian/roham/pkg/http_server"
+	"github.com/gocastsian/roham/pkg/postgresql"
+	"github.com/gocastsian/roham/userapp/delivery/http"
+	"github.com/gocastsian/roham/userapp/repository"
+	"github.com/gocastsian/roham/userapp/service/user"
 )
 
 type Application struct {
@@ -78,7 +78,10 @@ func startServers(app Application, wg *sync.WaitGroup) {
 		app.Logger.Info(fmt.Sprintf("HTTP server started on %d", app.Config.HTTPServer.Port))
 		if err := app.HTTPServer.Serve(); err != nil {
 			// todo add metrics
-			app.Logger.Error(fmt.Sprintf("error in HTTP server on %d", app.Config.HTTPServer.Port), err)
+			app.Logger.Error(
+				fmt.Sprintf("error in HTTP server on %d", app.Config.HTTPServer.Port),
+				slog.Any("err", err),
+			)
 		}
 		app.Logger.Info(fmt.Sprintf("HTTP server stopped %d", app.Config.HTTPServer.Port))
 	}()
@@ -108,6 +111,9 @@ func (app Application) shutdownHTTPServer(wg *sync.WaitGroup) {
 	httpShutdownCtx, httpCancel := context.WithTimeout(context.Background(), app.Config.HTTPServer.ShutDownCtxTimeout)
 	defer httpCancel()
 	if err := app.HTTPServer.Stop(httpShutdownCtx); err != nil {
-		app.Logger.Error(fmt.Sprintf("HTTP server graceful shutdown failed: %v", err))
+		app.Logger.Error(
+			fmt.Sprintf("HTTP server graceful shutdown failed: %v", err),
+			slog.Any("err", err),
+		)
 	}
 }

@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/labstack/gommon/log"
-	"github.com/redis/go-redis/v9"
+	redislib "github.com/redis/go-redis/v9"
 )
 
 type Config struct {
@@ -15,11 +15,11 @@ type Config struct {
 }
 
 type Adapter struct {
-	client *redis.Client
+	client *redislib.Client
 }
 
 func New(config Config) *Adapter {
-	rdb := redis.NewClient(&redis.Options{
+	rdb := redislib.NewClient(&redislib.Options{
 		Addr:     fmt.Sprintf("%s:%d", config.Host, config.Port),
 		Password: config.Password,
 		DB:       config.DB,
@@ -29,6 +29,6 @@ func New(config Config) *Adapter {
 	return &Adapter{client: rdb}
 }
 
-func (a Adapter) Client() *redis.Client {
+func (a Adapter) Client() *redislib.Client {
 	return a.client
 }

@@ -1,10 +1,10 @@
 package context
 
 import (
+	"github.com/gocastsian/roham/pkg/err_msg"
+	"github.com/gocastsian/roham/types"
 	"github.com/labstack/echo/v4"
 	"net/http"
-	"roham/pkg/err_msg"
-	"roham/types"
 )
 
 func ExtractUserInfo(c echo.Context) (*types.UserInfo, error) {

@@ -2,8 +2,8 @@ package http
 
 import (
 	"context"
+	httpserver "github.com/gocastsian/roham/pkg/http_server"
 	"log/slog"
-	httpserver "roham/pkg/http_server"
 )
 
 type Server struct {

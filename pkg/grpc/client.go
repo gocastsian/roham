@@ -1,7 +1,6 @@
 package grpc
 
 import (
-	"context"
 	"fmt"
 	"google.golang.org/grpc"
 )
@@ -13,7 +12,7 @@ type Client struct {
 
 func NewClient(cfg Client) (*grpc.ClientConn, error) {
 	address := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
-	conn, err := grpc.DialContext(context.Background(), address, grpc.WithInsecure())
+	conn, err := grpc.NewClient(address)
 
 	fmt.Println(err)
 	if err != nil {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"log/slog"
 
-	errmsg "roham/pkg/err_msg"
+	errmsg "github.com/gocastsian/roham/pkg/err_msg"
 )
 
 type Repository interface {
@@ -29,7 +29,7 @@ func (srv Service) GetAllUsers(ctx context.Context) (GetAllUsersResponse, error)
 
 	users, err := srv.repository.GetAllUsers(ctx)
 	if err != nil {
-		srv.logger.Error("user_GetAllUsers", err)
+		srv.logger.Error("user_GetAllUsers", slog.Any("err", err))
 		return GetAllUsersResponse{}, errmsg.ErrorResponse{
 			Message: err.Error(),
 			Errors: map[string]interface{}{

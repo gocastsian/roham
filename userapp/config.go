@@ -3,10 +3,10 @@ package userapp
 import (
 	"time"
 
-	httpserver "roham/pkg/http_server"
-	"roham/pkg/logger"
-	"roham/pkg/postgresql"
-	"roham/userapp/repository"
+	httpserver "github.com/gocastsian/roham/pkg/http_server"
+	"github.com/gocastsian/roham/pkg/logger"
+	"github.com/gocastsian/roham/pkg/postgresql"
+	"github.com/gocastsian/roham/userapp/repository"
 )
 
 type Config struct {

@@ -3,7 +3,7 @@ package statuscode
 import (
 	"net/http"
 
-	errmsg "roham/pkg/err_msg"
+	errmsg "github.com/gocastsian/roham/pkg/err_msg"
 )
 
 const (

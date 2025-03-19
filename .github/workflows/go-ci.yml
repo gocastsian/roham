@@ -1,0 +1,87 @@
+name: Go CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - name: Set up Go
+        uses: actions/setup-go@v5.3.0
+        with:
+          go-version: 1.24.0
+      - name: Go Mod Tidy Check
+        run: |
+          echo "==> Checking 'go mod tidy' consistency"
+          go mod tidy
+          git diff --exit-code
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - name: Set up Go
+        uses: actions/setup-go@v5.3.0
+        with:
+          go-version: 1.24.0
+      - name: Install golangci-lint
+        uses: golangci/golangci-lint-action@v6.5.1
+        with:
+          version: latest
+      - name: Run golangci-lint
+        run: golangci-lint run
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - name: Set up Go
+        uses: actions/setup-go@v5.3.0
+        with:
+          go-version: 1.24.0
+      - name: Run tests with coverage
+        run: |
+          echo "==> Running unit tests with coverage"
+          go test -v -coverprofile=coverage.out ./...
+          go tool cover -func=coverage.out | tee coverage.txt
+          # Check coverage threshold
+          THRESHOLD=0.0
+          COVERAGE=$(go tool cover -func=coverage.out | grep "total:" | awk '{print substr($3, 1, length($3)-1)}')
+          RESULT=$(awk -v c="$COVERAGE" -v t="$THRESHOLD" 'BEGIN {print (c < t)}')
+          if [ "$RESULT" -eq 1 ]; then
+            echo "Coverage $COVERAGE% is below threshold of $THRESHOLD%"
+            exit 1
+          else
+            echo "Coverage $COVERAGE% is above threshold of $THRESHOLD%. Great!"
+          fi
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4.6.1
+        with:
+          name: coverage
+          path: |
+            coverage.out
+            coverage.txt
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - name: Set up Go
+        uses: actions/setup-go@v5.3.0
+        with:
+          go-version: 1.24.0
+      - name: Install gosec
+        run: |
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
+          echo "==> Running gosec"
+          $(go env GOPATH)/bin/gosec ./... | tee gosec.txt || true
+      - name: Upload security report
+        uses: actions/upload-artifact@v4.6.1
+        with:
+          name: gosec-report
+          path: gosec.txt
