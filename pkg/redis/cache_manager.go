@@ -42,7 +42,7 @@ func (r *Cache) Get(ctx context.Context, key string) ([]byte, error) {
 }
 
 func (r *Cache) Set(ctx context.Context, key string, value interface{}) error {
-	ctx, cancel := context.WithTimeout(context.Background(), r.config.WriteTTL)
+	ctx, cancel := context.WithTimeout(ctx, r.config.WriteTTL)
 	defer cancel()
 	err := r.client.Set(ctx, key, value, r.config.TTL).Err()
 	if err != nil {
