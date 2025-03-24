@@ -9,7 +9,7 @@ http_server:
 
 
 logger:
-  file_path: "logs/user/service.log"
+  file_path: "logs/job/service.log"
   use_local_time: true
   file_max_size_in_mb: 10
   file_max_age_in_days: 7

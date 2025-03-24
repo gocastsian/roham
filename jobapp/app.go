@@ -3,7 +3,9 @@ package jobapp
 import (
 	"context"
 	"fmt"
+	"github.com/gocastsian/roham/adapter/temporal"
 	"github.com/gocastsian/roham/jobapp/delivery/http"
+	"github.com/gocastsian/roham/jobapp/service/job"
 	httpserver "github.com/gocastsian/roham/pkg/http_server"
 	"log/slog"
 	"os"
@@ -15,13 +17,17 @@ import (
 
 type Application struct {
 	HTTPServer http.Server
+	Temporal   temporal.Adapter
 	Logger     *slog.Logger
 	Config     Config
 }
 
 func Setup(config Config, logger *slog.Logger) Application {
+	testHandler := http.NewHandler()
+
 	return Application{
-		HTTPServer: http.New(httpserver.New(config.HTTPServer)),
+		HTTPServer: http.New(httpserver.New(config.HTTPServer), testHandler),
+		Temporal:   temporal.New(),
 		Logger:     logger,
 		Config:     config,
 	}
@@ -61,6 +67,19 @@ func startServers(app Application, wg *sync.WaitGroup) {
 		}
 		app.Logger.Info(fmt.Sprintf("HTTP server stopped on %d", app.Config.HTTPServer.Port))
 	}()
+
+	wg.Add(1)
+	go func() {
+		worker := job.New(app.Temporal.Client, app.Config.Temporal.GreetingQueueName)
+
+		worker.RegisterWorkflow(job.Greeting)
+		worker.RegisterActivity(job.SayHelloInPersian)
+
+		if err := worker.Start(); err != nil {
+			app.Logger.Error(fmt.Sprintf("error in running worker with err: %v", err))
+		}
+	}()
+
 }
 
 func (app Application) shutdownServers(ctx context.Context) bool {
