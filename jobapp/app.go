@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"github.com/gocastsian/roham/adapter/temporal"
 	"github.com/gocastsian/roham/jobapp/delivery/http"
+	"github.com/gocastsian/roham/jobapp/repository"
 	"github.com/gocastsian/roham/jobapp/service/job"
 	httpserver "github.com/gocastsian/roham/pkg/http_server"
+	"log"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -18,16 +20,25 @@ import (
 type Application struct {
 	HTTPServer http.Server
 	Temporal   temporal.Adapter
+	JobHandler http.Handler
+	JobService job.Service
+	JobRepo    job.Repository
 	Logger     *slog.Logger
 	Config     Config
 }
 
 func Setup(config Config, logger *slog.Logger) Application {
-	testHandler := http.NewHandler()
+	temporalAdapter := temporal.New()
+	jobRepo := repository.New()
+	jobSvc := job.NewSvc(temporalAdapter, jobRepo, config.Temporal)
+	jobHandler := http.NewHandler(jobSvc, temporalAdapter)
 
 	return Application{
-		HTTPServer: http.New(httpserver.New(config.HTTPServer), testHandler),
-		Temporal:   temporal.New(),
+		HTTPServer: http.New(httpserver.New(config.HTTPServer), jobHandler),
+		Temporal:   temporalAdapter,
+		JobHandler: jobHandler,
+		JobService: jobSvc,
+		JobRepo:    jobRepo,
 		Logger:     logger,
 		Config:     config,
 	}
@@ -40,6 +51,7 @@ func (app Application) Start() {
 	defer stop()
 
 	startServers(app, &wg)
+	startWorkers(app, &wg)
 
 	<-ctx.Done()
 	app.Logger.Info("Shutdown signal received...")
@@ -68,18 +80,20 @@ func startServers(app Application, wg *sync.WaitGroup) {
 		app.Logger.Info(fmt.Sprintf("HTTP server stopped on %d", app.Config.HTTPServer.Port))
 	}()
 
+}
+
+func startWorkers(app Application, wg *sync.WaitGroup) {
 	wg.Add(1)
 	go func() {
 		worker := job.New(app.Temporal.Client, app.Config.Temporal.GreetingQueueName)
 
-		worker.RegisterWorkflow(job.Greeting)
-		worker.RegisterActivity(job.SayHelloInPersian)
+		worker.RegisterWorkflow(app.JobService.Greeting)
+		worker.RegisterActivity(app.JobRepo.SayHelloInPersian)
 
 		if err := worker.Start(); err != nil {
-			app.Logger.Error(fmt.Sprintf("error in running worker with err: %v", err))
+			log.Fatalf(fmt.Sprintf("error in running worker with err: %v", err))
 		}
 	}()
-
 }
 
 func (app Application) shutdownServers(ctx context.Context) bool {
@@ -90,6 +104,10 @@ func (app Application) shutdownServers(ctx context.Context) bool {
 
 		shutdownWg.Add(1)
 		go app.shutdownHTTPServer(&shutdownWg)
+
+		//TODO: it can be better for example stop worker or terminate workflows
+		shutdownWg.Add(1)
+		go app.Temporal.Shutdown()
 
 		shutdownWg.Wait()
 		close(shutdownDone)

@@ -15,9 +15,12 @@ func New() Adapter {
 	if err != nil {
 		log.Fatalf(fmt.Sprintf("Unable to connect to temporal server, %v", err))
 	}
-	defer c.Close()
 
 	return Adapter{
 		Client: c,
 	}
+}
+
+func (a Adapter) Shutdown() {
+	a.Client.Close()
 }

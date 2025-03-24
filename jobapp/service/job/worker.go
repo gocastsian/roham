@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
-	"log"
 )
 
 type Worker struct {
@@ -14,12 +13,7 @@ type Worker struct {
 func New(client client.Client, queueName string) Worker {
 	w := worker.New(client, queueName, worker.Options{})
 
-	err := w.Run(worker.InterruptCh())
-	if err != nil {
-		log.Fatalf("worker.Run err: %v", err)
-	}
-
-	return Worker{}
+	return Worker{worker: w}
 }
 
 func (w Worker) RegisterWorkflow(wf interface{}) {
