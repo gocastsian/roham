@@ -91,7 +91,7 @@ func startWorkers(app Application, wg *sync.WaitGroup) {
 		worker.RegisterActivity(app.JobRepo.SayHelloInPersian)
 
 		if err := worker.Start(); err != nil {
-			log.Fatalf(fmt.Sprintf("error in running worker with err: %v", err))
+			log.Fatalf("error in running worker with err: %v", err)
 		}
 	}()
 }
