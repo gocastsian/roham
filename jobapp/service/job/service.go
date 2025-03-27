@@ -15,10 +15,10 @@ type Repository interface {
 type Service struct {
 	Temporal   temporaladapter.Adapter
 	Repository Repository
-	Config     Config
+	Config     temporaladapter.Config
 }
 
-func NewSvc(temporalAdapter temporaladapter.Adapter, jobRepo Repository, config Config) Service {
+func NewSvc(temporalAdapter temporaladapter.Adapter, jobRepo Repository, config temporaladapter.Config) Service {
 	return Service{
 		Temporal:   temporalAdapter,
 		Repository: jobRepo,

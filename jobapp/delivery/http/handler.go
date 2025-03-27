@@ -32,13 +32,13 @@ func (h Handler) Test(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
-	ctx, cancel := context.WithTimeout(c.Request().Context(), time.Second)
+	ctx, cancel := context.WithTimeout(c.Request().Context(), time.Second*5)
 	defer cancel()
 
 	workflowId := "test" + uuid.New().String()
 	options := client.StartWorkflowOptions{
 		ID:        workflowId,
-		TaskQueue: h.jobService.Config.GreetingQueueName,
+		TaskQueue: job.GREETING_QUEUE_NAME,
 	}
 	we, err := h.temporalAdapter.Client.ExecuteWorkflow(ctx, options, h.jobService.Greeting, body.Name)
 	if err != nil {

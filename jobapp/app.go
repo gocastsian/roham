@@ -28,7 +28,7 @@ type Application struct {
 }
 
 func Setup(config Config, logger *slog.Logger) Application {
-	temporalAdapter := temporal.New()
+	temporalAdapter := temporal.New(config.Temporal)
 	jobRepo := repository.New()
 	jobSvc := job.NewSvc(temporalAdapter, jobRepo, config.Temporal)
 	jobHandler := http.NewHandler(jobSvc, temporalAdapter)
@@ -85,7 +85,7 @@ func startServers(app Application, wg *sync.WaitGroup) {
 func startWorkers(app Application, wg *sync.WaitGroup) {
 	wg.Add(1)
 	go func() {
-		worker := job.New(app.Temporal.Client, app.Config.Temporal.GreetingQueueName)
+		worker := job.New(app.Temporal.Client, "greeting")
 
 		worker.RegisterWorkflow(app.JobService.Greeting)
 		worker.RegisterActivity(app.JobRepo.SayHelloInPersian)

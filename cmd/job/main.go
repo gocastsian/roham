@@ -24,7 +24,7 @@ func main() {
 		CallbackEnv:  nil,
 	}
 	if err := cfgloader.Load(options, &cfg); err != nil {
-		log.Fatalf("Failed to load userapp config: %v", err)
+		log.Fatalf("Failed to load jobapp config: %v", err)
 	}
 
 	logger.Init(cfg.Logger)
