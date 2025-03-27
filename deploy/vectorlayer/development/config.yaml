@@ -1,0 +1,38 @@
+total_shutdown_timeout:
+  15s
+
+http_server:
+  port: 5002
+  cors:
+    allow_origins: "*"
+  shutdown_context_timeout: "10s"
+
+repository:
+  cache_prefix: vectorlayer
+  cache_enabled: true
+
+cache_config:
+  ttl: "24h"
+  write_ttl: "10s"
+
+postgres_db:
+  host: vectorlayer-db
+  port: 5432
+  user: "vectorlayer_admin"
+  password: "password123"
+  db_name: vectorlayer_db
+  ssl_mode: disable
+  max_idle_conns: 15
+  max_open_conns: 100
+  conn_max_lifetime: 5
+  path_of_migration: './vectorlayerapp/repository/migrations'
+
+redis:
+  host: user-redis
+  Port: 6379
+
+logger:
+  file_path: "logs/vectorlayer/service.log"
+  use_local_time: true
+  file_max_size_in_mb: 10
+  file_max_age_in_days: 7
