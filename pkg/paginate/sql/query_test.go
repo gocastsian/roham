@@ -20,7 +20,7 @@ func TestWriteQuery(t *testing.T) {
 		expectedCountQuery     string
 		expectedArgs           []interface{}
 	}{
-		// Test Case 1: No filters, just pagination and sorting
+		// Greeting Case 1: No filters, just pagination and sorting
 		{
 			name:               "No filters, just pagination and sorting",
 			table:              "users",
@@ -35,7 +35,7 @@ func TestWriteQuery(t *testing.T) {
 			expectedArgs:       []interface{}{10, 10},
 		},
 
-		// Test Case 2: With filters and pagination
+		// Greeting Case 2: With filters and pagination
 		{
 			name:  "With filters and pagination",
 			table: "users",
@@ -52,7 +52,7 @@ func TestWriteQuery(t *testing.T) {
 			expectedArgs:       []interface{}{18, 5, 0},
 		},
 
-		// Test Case 3: With filters, default sort column, and pagination
+		// Greeting Case 3: With filters, default sort column, and pagination
 		{
 			name:  "With filters, default sort column and pagination",
 			table: "products",
@@ -68,7 +68,7 @@ func TestWriteQuery(t *testing.T) {
 			expectedArgs:       []interface{}{100, 20, 40},
 		},
 
-		// Test Case 4: With filters and sorting in descending order
+		// Greeting Case 4: With filters and sorting in descending order
 		{
 			name:  "With filters and sorting in descending order",
 			table: "orders",
@@ -84,7 +84,7 @@ func TestWriteQuery(t *testing.T) {
 			expectedArgs:       []interface{}{"completed", 10, 0},
 		},
 
-		// Test Case 5: Multiple IN conditions
+		// Greeting Case 5: Multiple IN conditions
 		{
 			name:  "Multiple IN conditions",
 			table: "products",
@@ -100,7 +100,7 @@ func TestWriteQuery(t *testing.T) {
 			expectedArgs:       []interface{}{"electronics", "books", "clothing", 5, 0},
 		},
 
-		// Test Case 6: Multiple filters with different operators
+		// Greeting Case 6: Multiple filters with different operators
 		{
 			name:  "Multiple filters with different operators",
 			table: "employees",
@@ -117,7 +117,7 @@ func TestWriteQuery(t *testing.T) {
 			expectedArgs:       []interface{}{30, "HR", 5, 0},
 		},
 
-		// Test Case 7: Multiple filters using BETWEEN operator
+		// Greeting Case 7: Multiple filters using BETWEEN operator
 		{
 			name:  "Multiple filters using BETWEEN operator",
 			table: "products",
