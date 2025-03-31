@@ -11,6 +11,8 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     is_active BOOLEAN DEFAULT TRUE,
+    role SMALLINT NOT NULL,
+    password_hash TEXT NOT NULL,
     CONSTRAINT chk_birth_date CHECK (birth_date <= CURRENT_DATE)
     );
 

@@ -10,9 +10,11 @@ import (
 	"syscall"
 
 	httpserver "github.com/gocastsian/roham/pkg/http_server"
+	"github.com/gocastsian/roham/pkg/opa"
 	"github.com/gocastsian/roham/pkg/postgresql"
 	"github.com/gocastsian/roham/userapp/delivery/http"
 	"github.com/gocastsian/roham/userapp/repository"
+	"github.com/gocastsian/roham/userapp/service/guard"
 	"github.com/gocastsian/roham/userapp/service/user"
 )
 
@@ -29,8 +31,14 @@ func Setup(config Config, postgresConn *postgresql.Database, logger *slog.Logger
 
 	userRepo := repository.NewUserRepo(config.Repository, postgresConn.DB, logger)
 	userValidator := user.NewValidator(userRepo)
-	userSrv := user.NewService(userRepo, userValidator, logger)
-	userHandler := http.NewHandler(userSrv)
+	opaEvaluator, err := opa.NewOPAEvaluator(config.Guard.OPAPolicy)
+	if err != nil {
+		panic(err)
+	}
+
+	guardSrv := guard.NewService(config.Guard, logger, opaEvaluator)
+	userSrv := user.NewService(userRepo, userValidator, logger, &guardSrv)
+	userHandler := http.NewHandler(userSrv, guardSrv)
 
 	return Application{
 		UserRepo:    userRepo,

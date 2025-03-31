@@ -7,6 +7,7 @@ import (
 	"github.com/gocastsian/roham/pkg/logger"
 	"github.com/gocastsian/roham/pkg/postgresql"
 	"github.com/gocastsian/roham/userapp/repository"
+	"github.com/gocastsian/roham/userapp/service/guard"
 )
 
 type Config struct {
@@ -15,4 +16,5 @@ type Config struct {
 	Repository           repository.Config `koanf:"repository"`
 	Logger               logger.Config     `koanf:"logger"`
 	TotalShutdownTimeout time.Duration     `koanf:"total_shutdown_timeout"`
+	Guard                guard.Config      `koanf:"guard"`
 }

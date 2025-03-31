@@ -6,3 +6,7 @@ type UserInfo struct {
 }
 
 type Role uint8
+
+const (
+	RoleAdmin Role = iota + 1 // admin = 1
+)
