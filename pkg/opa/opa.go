@@ -17,8 +17,7 @@ type Config struct {
 }
 
 type OPAEvaluator struct {
-	config Config
-	query  rego.PreparedEvalQuery
+	query rego.PreparedEvalQuery
 }
 
 // NewOPAEvaluator initializes OPA with either inline policy or policy from file
