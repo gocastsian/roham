@@ -3,6 +3,6 @@
 docker compose \
 --env-file ./deploy/.env \
 --project-directory . \
--f ./deploy/rohom/development/traefik-compose.yml \
+-f ./deploy/roham/development/traefik-compose.yaml \
 -f ./deploy/user/development/docker-compose.yaml \
  "$@"

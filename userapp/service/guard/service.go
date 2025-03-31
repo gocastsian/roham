@@ -1,26 +1,28 @@
 package guard
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
-	"net/http"
 	"strings"
 	"time"
 
-	"github.com/gocastsian/roham/userapp/service/guard/opa"
+	"github.com/gocastsian/roham/pkg/opa"
 	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/labstack/echo/v4"
 )
 
 type Service struct {
-	config Config
-	logger *slog.Logger
+	config             Config
+	logger             *slog.Logger
+	opaPolicyEvaluator *opa.OPAEvaluator
 }
 
-func NewAuthService(cfg Config, logger *slog.Logger) Service {
+func NewService(cfg Config, logger *slog.Logger, opaPolicyEvaluator *opa.OPAEvaluator) Service {
 	return Service{
-		config: cfg,
-		logger: logger,
+		config:             cfg,
+		logger:             logger,
+		opaPolicyEvaluator: opaPolicyEvaluator,
 	}
 }
 
@@ -58,7 +60,7 @@ func (srv Service) ParseToken(bearerToken string) (*Claims, error) {
 
 	token, err := jwt.ParseWithClaims(tokenStr, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 
-		return []byte("roham"), nil
+		return []byte(srv.config.SignKey), nil
 	})
 
 	if err != nil {
@@ -76,29 +78,7 @@ func (srv Service) GetClaimsFromEchoContext(c echo.Context) *Claims {
 	return c.Get(UserCtxKey).(*Claims)
 }
 
-func (srv Service) GuardMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
-	return func(c echo.Context) error {
-		token := c.Request().Header.Get("Authorization")
-		if token == "" {
-			return c.JSON(http.StatusUnauthorized, map[string]string{"error": "missing token"})
-		}
-
-		claims, err := srv.ParseToken(token)
-		if err != nil {
-			return c.JSON(http.StatusUnauthorized, map[string]string{"error": err.Error()})
-		}
-
-		input := map[string]interface{}{
-			"role":    claims.UserClaim.Role,
-			"request": c.QueryParam("request"),
-		}
-
-		// check with opa
-		if err := opa.PolicyEvaluation(c.Request().Context(), opa.RegoAuthorization, opa.RuleCheckRequestOnly, input); err != nil {
-			return c.JSON(http.StatusForbidden, map[string]string{"error": "access denied"})
-		}
-
-		c.Set(UserCtxKey, claims)
-		return next(c)
-	}
+// CheckPolicy evaluates the policy based on the user's role and request
+func (srv Service) CheckPolicy(ctx context.Context, input map[string]interface{}) error {
+	return srv.opaPolicyEvaluator.Evaluate(ctx, input)
 }

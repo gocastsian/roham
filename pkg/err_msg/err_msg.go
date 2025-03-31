@@ -9,6 +9,8 @@ var (
 	ErrGetUserInfo          = errors.New("get user info failed")
 	ErrFailedDecodeBase64   = errors.New("decode data to base 64 failed")
 	ErrFailedUnmarshalJson  = errors.New("unmarshal data to JSON failed")
+	ErrUnauthorized         = errors.New("unauthorized")
+	ErrWrongCredentials     = errors.New("username or password isn't correct")
 )
 
 // Define constant messages generally

@@ -37,10 +37,31 @@ logger:
   file_max_size_in_mb: 10
   file_max_age_in_days: 7
 
-auth:
+guard:
   sign_key: "roham"
   access_expiration_time: 30m
   refresh_expiration_time: 50m
-  access_subject : "at_user"
-  refresh_subject : "rf_user"
-  context_key: "userInfo"
+  access_subject: "at_user"
+  refresh_subject: "rf_user"
+  opa_policy:
+    package: "httpapi.authz"
+    rule: "allow"
+    policy: |
+      package httpapi.authz
+
+      default allow = false
+
+      # Define role constants
+      role_admin := 1
+
+      # Admin can access everything
+      allow if {
+          input.user.role == role_admin
+      }
+
+      # Regular users can access if the request has query parameter "request=GetMap"
+      allow if {
+          input.request.query.request == "GetMap"
+      }
+
+    is_path: false

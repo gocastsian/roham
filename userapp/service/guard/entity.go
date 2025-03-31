@@ -3,6 +3,7 @@ package guard
 import (
 	"time"
 
+	"github.com/gocastsian/roham/pkg/opa"
 	"github.com/gocastsian/roham/types"
 	jwt "github.com/golang-jwt/jwt/v4"
 )
@@ -31,4 +32,5 @@ type Config struct {
 	RefreshExpirationTime time.Duration `koanf:"refresh_expiration_time"`
 	AccessSubject         string        `koanf:"access_subject"`
 	RefreshSubject        string        `koanf:"refresh_subject"`
+	OPAPolicy             opa.Config    `koanf:"opa_policy"`
 }

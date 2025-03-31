@@ -27,7 +27,7 @@ func NewUserRepo(config Config, db *sql.DB, logger *slog.Logger) user.Repository
 }
 
 func (repo UserRepo) GetAllUsers(ctx context.Context) ([]user.User, error) {
-	query := `SELECT id, username, first_name, last_name, email, phone_number, birth_date, created_at, updated_at FROM users;`
+	query := `SELECT id, username, first_name, last_name, email, phone_number, birth_date, created_at, updated_at, role FROM users;`
 
 	stmt, err := repo.PostgreSQL.PrepareContext(ctx, query)
 	if err != nil {
@@ -57,6 +57,7 @@ func (repo UserRepo) GetAllUsers(ctx context.Context) ([]user.User, error) {
 			&birthDate,
 			&result.CreatedAt,
 			&result.UpdatedAt,
+			&result.Role,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning user row: %w", err)
@@ -79,4 +80,54 @@ func (repo UserRepo) GetAllUsers(ctx context.Context) ([]user.User, error) {
 	}
 
 	return users, nil
+}
+
+func (repo UserRepo) GetUserByPhoneNumber(ctx context.Context, phoneNumber string) (user.User, error) {
+
+	// Check if the user exists
+	exists, err := repo.checkUserExist(ctx, phoneNumber)
+	if !exists || err != nil {
+		return user.User{}, fmt.Errorf("failed to check user existence: %w", err)
+	}
+
+	// Query to fetch the user's details
+	query := "SELECT id, phone_number, role, password_hash FROM users WHERE phone_number=$1"
+	stmt, err := repo.PostgreSQL.PrepareContext(ctx, query)
+	if err != nil {
+		return user.User{}, fmt.Errorf("failed to prepare statement: %w", err)
+	}
+	defer stmt.Close()
+
+	var usr user.User
+	err = stmt.QueryRowContext(ctx, phoneNumber).Scan(&usr.ID, &usr.PhoneNumber, &usr.Role, &usr.PasswordHash)
+	if err != nil {
+		return user.User{}, fmt.Errorf("failed to execute query: %w", err)
+	}
+
+	return usr, nil
+}
+
+func (repo UserRepo) checkUserExist(ctx context.Context, phoneNumber string) (bool, error) {
+
+	query := `
+		SELECT EXISTS (
+			SELECT 1
+			FROM users
+			WHERE phone_number = $1
+		)
+	`
+
+	stmt, err := repo.PostgreSQL.PrepareContext(ctx, query)
+	if err != nil {
+		return false, fmt.Errorf("failed to prepare statement: %w", err)
+	}
+	defer stmt.Close()
+
+	var exists bool
+	err = stmt.QueryRowContext(ctx, phoneNumber).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("failed to execute prepared statement: %w", err)
+	}
+
+	return true, nil
 }

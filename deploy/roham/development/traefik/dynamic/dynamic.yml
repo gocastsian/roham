@@ -1,4 +1,23 @@
 http:
   middlewares:
-    forwardedheaders:
-      forwardfor: true
+    # Authentication middleware (validates JWT)
+    roham_auth:
+      forwardAuth:
+        address: "http://user-service:5001/v1/auth"  # Point to your authenticate endpoint
+        authResponseHeaders:
+          - X-User-Info  # Critical for authorization flow
+          - Authorization  # Optional: forward original token
+        authRequestHeaders:
+          - Authorization
+          - X-Original-Method
+          - X-Original-URI
+
+    # Authorization middleware (checks policies)
+    roham_authz:
+      forwardAuth:
+        address: "http://user-service:5001/v1/authz"  # Point to your authorize endpoint
+        authResponseHeaders: []  # No additional headers needed
+        authRequestHeaders:
+          - X-User-Info  # From previous middleware
+          - X-Original-Method
+          - X-Original-URI

@@ -2,26 +2,32 @@ package user
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	errmsg "github.com/gocastsian/roham/pkg/err_msg"
+	"github.com/gocastsian/roham/pkg/password"
+	"github.com/gocastsian/roham/userapp/service/guard"
 )
 
 type Repository interface {
 	GetAllUsers(ctx context.Context) ([]User, error)
+	GetUserByPhoneNumber(ctx context.Context, phoneNumber string) (User, error)
 }
 
 type Service struct {
 	repository Repository
 	validator  Validator
 	logger     *slog.Logger
+	guard      *guard.Service
 }
 
-func NewService(repo Repository, validator Validator, logger *slog.Logger) Service {
+func NewService(repo Repository, validator Validator, logger *slog.Logger, guard *guard.Service) Service {
 	return Service{
 		repository: repo,
 		validator:  validator,
 		logger:     logger,
+		guard:      guard,
 	}
 }
 
@@ -50,7 +56,59 @@ func (srv Service) GetAllUsers(ctx context.Context) (GetAllUsersResponse, error)
 			BirthDate:   user.BirthDate,
 			CreatedAt:   user.CreatedAt,
 			UpdatedAt:   user.UpdatedAt,
+			Role:        user.Role,
 		})
 	}
 	return GetAllUsersResponse{Users: responseUsers}, nil
+}
+
+func (srv Service) Login(ctx context.Context, loginReq LoginRequest) (LoginResponse, error) {
+	if err := srv.validator.ValidatePhoneNumber(loginReq.PhoneNumber); err != nil {
+		return LoginResponse{}, errmsg.ErrorResponse{
+			Message: "invalid phone number",
+			Errors:  map[string]interface{}{"validation_error": err.Error()},
+		}
+	}
+
+	usr, err := srv.repository.GetUserByPhoneNumber(ctx, loginReq.PhoneNumber)
+	if err != nil {
+		srv.logger.Error("user_Login", slog.Any("err", err))
+		return LoginResponse{}, errmsg.ErrorResponse{
+			Message: err.Error(),
+			Errors:  map[string]interface{}{"user_Login": err.Error()},
+		}
+	}
+
+	if !password.CheckPasswordHash(loginReq.Password, usr.PasswordHash) {
+		return LoginResponse{}, errmsg.ErrorResponse{
+			Message: errmsg.ErrWrongCredentials.Error(),
+			Errors:  map[string]interface{}{"user_Login": errmsg.ErrWrongCredentials.Error()},
+		}
+	}
+
+	userClaim := guard.UserClaim{
+		ID:   usr.ID,
+		Role: usr.Role,
+	}
+
+	accessTok, err := srv.guard.CreateAccessToken(userClaim)
+	if err != nil {
+
+		return LoginResponse{}, fmt.Errorf("unexpected error: %w", err)
+	}
+
+	refreshTok, err := srv.guard.CreateRefreshToken(userClaim)
+	if err != nil {
+
+		return LoginResponse{}, fmt.Errorf("unexpected error: %w", err)
+	}
+
+	return LoginResponse{
+		ID:          usr.ID,
+		PhoneNumber: usr.PhoneNumber,
+		Tokens: Tokens{
+			AccessToken:  accessTok,
+			RefreshToken: refreshTok,
+		},
+	}, nil
 }

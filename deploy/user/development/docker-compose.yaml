@@ -23,7 +23,7 @@ services:
   user-service:
     build:
       context: .
-      dockerfile: ./Dockerfile
+      dockerfile: ./deploy/user/development/Dockerfile
       args:
         GO_IMAGE_NAME: ${GO_IMAGE_NAME}
         GO_IMAGE_VERSION: ${GO_IMAGE_VERSION}
@@ -39,10 +39,24 @@ services:
     profiles:
       - user
     labels:
+      # Enable Traefik for this service
       - "traefik.enable=true"
+
+      # Routers with authentication
       - "traefik.http.routers.${SERVICE_NAME}_user.service=${SERVICE_NAME}_user"
-      - "traefik.http.routers.${SERVICE_NAME}_user.rule=Host(`${SERVICE_DOMAIN}`)&&PathPrefix(`/users`)"
-      - "traefik.http.routers.${SERVICE_NAME}_user.middlewares=${SERVICE_NAME}_strip_user"
+      - "traefik.http.routers.${SERVICE_NAME}_user.rule=Host(`${SERVICE_DOMAIN}`) && PathPrefix(`/users`)"
       - "traefik.http.routers.${SERVICE_NAME}_user.entrypoints=web"
+      - "traefik.http.routers.${SERVICE_NAME}_user.middlewares=roham_auth@file,roham_authz@file,${SERVICE_NAME}_strip_user"
       - "traefik.http.services.${SERVICE_NAME}_user.loadbalancer.server.port=5001"
+
+      # Routers without authentication
+      - "traefik.http.routers.${SERVICE_NAME}_user_no_auth.service=${SERVICE_NAME}_user"
+      - "traefik.http.routers.${SERVICE_NAME}_user_no_auth.rule=Host(`${SERVICE_DOMAIN}`) && (
+          PathPrefix(`/users/v1/health-check`) ||
+          PathPrefix(`/users/v1/users/login`))"
+      - "traefik.http.routers.${SERVICE_NAME}_user_no_auth.entrypoints=web"
+      - "traefik.http.routers.${SERVICE_NAME}_user_no_auth.middlewares=${SERVICE_NAME}_strip_user"
+
+      # Middleware for stripping /users prefix
       - "traefik.http.middlewares.${SERVICE_NAME}_strip_user.stripprefix.prefixes=/users"
+
