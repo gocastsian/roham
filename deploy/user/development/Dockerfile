@@ -1,7 +1,9 @@
-FROM cosmtrek/air:latest
+ARG GO_IMAGE_NAME
+ARG GO_IMAGE_VERSION
 
+FROM ${GO_IMAGE_NAME}:${GO_IMAGE_VERSION}
+
+# Set working directory
 WORKDIR /home/app
 
-COPY . /home/app
-
-CMD ["air", "-c", ".air.toml"]
+RUN go install github.com/air-verse/air@latest
