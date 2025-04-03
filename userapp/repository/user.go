@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/gocastsian/roham/types"
 	"log/slog"
 
 	"github.com/gocastsian/roham/userapp/service/user"
@@ -130,4 +131,68 @@ func (repo UserRepo) checkUserExist(ctx context.Context, phoneNumber string) (bo
 	}
 
 	return true, nil
+}
+
+func (repo UserRepo) GetUser(ctx context.Context, ID types.ID) (user.User, error) {
+	// Check if the user exists
+	exists, err := repo.checkUserExistByID(ctx, ID)
+	if err != nil {
+		return user.User{}, fmt.Errorf("failed to check user existence: %w", err)
+	}
+
+	if exists == false {
+		return user.User{}, fmt.Errorf("the user not found")
+	}
+
+	// Query to fetch the user's details
+	query := "SELECT id, username, first_name, last_name, email, phone_number, birth_date, created_at, updated_at, role FROM users WHERE ID=$1"
+	stmt, err := repo.PostgreSQL.PrepareContext(ctx, query)
+	if err != nil {
+		return user.User{}, fmt.Errorf("failed to prepare statement: %w", err)
+	}
+	defer stmt.Close()
+
+	var usr user.User
+	err = stmt.QueryRowContext(ctx, ID).Scan(
+		&usr.ID,
+		&usr.Username,
+		&usr.FirstName,
+		&usr.LastName,
+		&usr.Email,
+		&usr.PhoneNumber,
+		&usr.BirthDate,
+		&usr.CreatedAt,
+		&usr.UpdatedAt,
+		&usr.Role,
+	)
+	if err != nil {
+		return user.User{}, fmt.Errorf("failed to execute query: %w", err)
+	}
+
+	return usr, nil
+}
+
+func (repo UserRepo) checkUserExistByID(ctx context.Context, ID types.ID) (bool, error) {
+
+	query := `
+		SELECT EXISTS (
+			SELECT 1
+			FROM users
+			WHERE ID = $1
+		)
+	`
+
+	stmt, err := repo.PostgreSQL.PrepareContext(ctx, query)
+	if err != nil {
+		return false, fmt.Errorf("failed to prepare statement: %w", err)
+	}
+	defer stmt.Close()
+
+	var exists bool
+	err = stmt.QueryRowContext(ctx, ID).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("failed to execute prepared statement: %w", err)
+	}
+
+	return exists, nil
 }
