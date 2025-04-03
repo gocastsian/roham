@@ -140,7 +140,7 @@ func (repo UserRepo) GetUser(ctx context.Context, ID types.ID) (user.User, error
 		return user.User{}, fmt.Errorf("failed to check user existence: %w", err)
 	}
 
-	if exists == false {
+	if !exists {
 		return user.User{}, fmt.Errorf("the user not found")
 	}
 
