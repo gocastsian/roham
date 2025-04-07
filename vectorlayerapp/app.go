@@ -3,7 +3,10 @@ package vectorlayerapp
 import (
 	"context"
 	"fmt"
+	"github.com/gocastsian/roham/adapter/temporal"
+	job "github.com/gocastsian/roham/vectorlayerapp/job/temporal"
 	"github.com/gocastsian/roham/vectorlayerapp/service"
+	"log"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -21,6 +24,7 @@ type Application struct {
 	layerSrv   service.Service
 	Handler    http.Handler
 	HTTPServer http.Server
+	Temporal   temporal.Adapter
 	Config     Config
 	Logger     *slog.Logger
 }
@@ -49,6 +53,8 @@ func (app Application) Start() {
 	defer stop()
 
 	startServers(app, &wg)
+	startWorkers(app, &wg)
+
 	<-ctx.Done()
 	app.Logger.Info("Shutdown signal received...")
 
@@ -84,6 +90,20 @@ func startServers(app Application, wg *sync.WaitGroup) {
 			)
 		}
 		app.Logger.Info(fmt.Sprintf("HTTP server stopped %d", app.Config.HTTPServer.Port))
+	}()
+}
+
+func startWorkers(app Application, wg *sync.WaitGroup) {
+	wg.Add(1)
+	go func() {
+		worker := job.New(app.Temporal.Client, "greeting")
+
+		worker.RegisterWorkflow(app.layerSrv.HealthCheckJob)
+		worker.RegisterActivity(app.layerRepo.HealthCheckJob)
+
+		if err := worker.Start(); err != nil {
+			log.Fatalf("error in running worker with err: %v", err)
+		}
 	}()
 }
 

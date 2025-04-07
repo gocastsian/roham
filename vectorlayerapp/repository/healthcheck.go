@@ -30,3 +30,7 @@ func (r LayerRepo) HealthCheck(ctx context.Context) (string, error) {
 
 	return "everything is ok", nil
 }
+
+func (r LayerRepo) HealthCheckJob() (string, error) {
+	return "job is ok", nil
+}
