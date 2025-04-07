@@ -100,8 +100,8 @@ func startWorkers(app Application, wg *sync.WaitGroup) {
 	go func() {
 		worker := job.New(app.Temporal.Client, "greeting")
 
-		worker.RegisterWorkflow(app.layerSrv.HealthCheckJob)
-		worker.RegisterActivity(app.layerRepo.HealthCheckJob)
+		worker.RegisterWorkflow(app.layerSrv.HealthCheckWorkflow)
+		worker.RegisterActivity(app.layerRepo.HealthCheckActivity)
 
 		if err := worker.Start(); err != nil {
 			log.Fatalf("error in running worker with err: %v", err)

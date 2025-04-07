@@ -56,7 +56,7 @@ func (h Handler) healthCheckJob(c echo.Context) error {
 		TaskQueue: job.GREETING_QUEUE_NAME,
 	}
 
-	we, err := h.Temporal.Client.ExecuteWorkflow(ctx, options, h.LayerService.HealthCheckJob, body.Name)
+	we, err := h.Temporal.Client.ExecuteWorkflow(ctx, options, h.LayerService.HealthCheckWorkflow, body.Name)
 	if err != nil {
 		return c.JSON(http.StatusOK, echo.Map{
 			"message": fmt.Sprintf("Failed to start workflow: %v", err),

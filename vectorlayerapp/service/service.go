@@ -9,7 +9,7 @@ import (
 
 type Repository interface {
 	HealthCheck(ctx context.Context) (string, error)
-	HealthCheckJob(ctx context.Context, name string) (string, error)
+	HealthCheckActivity(ctx context.Context, name string) (string, error)
 }
 
 type Service struct {
@@ -32,7 +32,7 @@ func (s Service) HealthCheckSrv(ctx context.Context) (string, error) {
 	return check, nil
 }
 
-func (s Service) HealthCheckJob(ctx workflow.Context, name string) (string, error) {
+func (s Service) HealthCheckWorkflow(ctx workflow.Context, name string) (string, error) {
 	ao := workflow.ActivityOptions{
 		StartToCloseTimeout: 3 * time.Second,
 		RetryPolicy: &temporal.RetryPolicy{
@@ -45,7 +45,7 @@ func (s Service) HealthCheckJob(ctx workflow.Context, name string) (string, erro
 	ctx = workflow.WithActivityOptions(ctx, ao)
 
 	var res string
-	err := workflow.ExecuteActivity(ctx, s.repository.HealthCheckJob, name).Get(ctx, &res)
+	err := workflow.ExecuteActivity(ctx, s.repository.HealthCheckActivity, name).Get(ctx, &res)
 
 	if err != nil {
 		return "", err
