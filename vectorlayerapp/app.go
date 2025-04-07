@@ -34,7 +34,8 @@ func Setup(ctx context.Context, config Config, postgresConn *postgresql.Database
 	LayerRepo := repository.NewLayerRepo(postgresConn.DB)
 	LayerValidator := service.NewValidator(LayerRepo)
 	LayerSrv := service.NewService(LayerRepo, LayerValidator)
-	Handler := http.NewHandler(LayerSrv, logger)
+	temporalAdp := temporal.New(config.Temporal)
+	Handler := http.NewHandler(LayerSrv, logger, temporalAdp)
 
 	return Application{
 		layerRepo:  LayerRepo,
@@ -43,6 +44,7 @@ func Setup(ctx context.Context, config Config, postgresConn *postgresql.Database
 		HTTPServer: http.New(httpserver.New(config.HTTPServer), Handler, logger),
 		Config:     config,
 		Logger:     logger,
+		Temporal:   temporalAdp,
 	}
 }
 

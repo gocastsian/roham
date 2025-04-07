@@ -35,5 +35,5 @@ func (s Server) RegisterRoutes() {
 
 	v1.GET("/health-check", s.healthCheck)
 
-	v1.GET("/test", s.Handler.Test)
+	v1.GET("/health-check-job", s.Handler.Test)
 }
