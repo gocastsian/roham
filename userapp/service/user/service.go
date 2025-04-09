@@ -3,6 +3,7 @@ package user
 import (
 	"context"
 	"fmt"
+	"github.com/gocastsian/roham/types"
 	"log/slog"
 
 	errmsg "github.com/gocastsian/roham/pkg/err_msg"
@@ -13,6 +14,7 @@ import (
 type Repository interface {
 	GetAllUsers(ctx context.Context) ([]User, error)
 	GetUserByPhoneNumber(ctx context.Context, phoneNumber string) (User, error)
+	GetUser(ctx context.Context, ID types.ID) (User, error)
 }
 
 type Service struct {
@@ -111,4 +113,32 @@ func (srv Service) Login(ctx context.Context, loginReq LoginRequest) (LoginRespo
 			RefreshToken: refreshTok,
 		},
 	}, nil
+}
+
+func (srv Service) GetUser(ctx context.Context, userID types.ID) (GetAllUsersItem, error) {
+
+	user, err := srv.repository.GetUser(ctx, userID)
+	if err != nil {
+		srv.logger.Error("user_GetUser", slog.Any("err", err))
+		return GetAllUsersItem{}, errmsg.ErrorResponse{
+			Message: err.Error(),
+			Errors: map[string]interface{}{
+				"user_GetUser": err.Error(),
+			},
+		}
+	}
+	responseUser := GetAllUsersItem{
+		ID:          user.ID,
+		Username:    user.Username,
+		FirstName:   user.FirstName,
+		LastName:    user.LastName,
+		Avatar:      user.Avatar,
+		PhoneNumber: user.PhoneNumber,
+		Email:       user.Email,
+		BirthDate:   user.BirthDate,
+		CreatedAt:   user.CreatedAt,
+		UpdatedAt:   user.UpdatedAt,
+		Role:        user.Role,
+	}
+	return responseUser, nil
 }

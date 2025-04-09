@@ -4,8 +4,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/gocastsian/roham/types"
 	"log"
 	"net/http"
+	"strconv"
 
 	errmsg "github.com/gocastsian/roham/pkg/err_msg"
 	"github.com/gocastsian/roham/pkg/statuscode"
@@ -139,4 +141,24 @@ func preparePolicyInput(c echo.Context, userClaim guard.UserClaim) (map[string]i
 			"query":  queryParams,
 		},
 	}, nil
+}
+
+func (h Handler) GetUser(c echo.Context) error {
+	idStr := c.Param("id")
+	userID, err := strconv.Atoi(idStr)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"message": "ID not found.",
+		})
+	}
+
+	res, err := h.UserService.GetUser(c.Request().Context(), types.ID(uint(userID)))
+	if err != nil {
+		if vErr, ok := err.(validator.Error); ok {
+			return c.JSON(vErr.StatusCode(), vErr)
+		}
+		return c.JSON(statuscode.MapToHTTPStatusCode(err.(errmsg.ErrorResponse)), err)
+	}
+
+	return c.JSON(http.StatusOK, res)
 }
