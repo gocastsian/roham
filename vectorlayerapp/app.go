@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 	"github.com/gocastsian/roham/adapter/temporal"
-	job "github.com/gocastsian/roham/vectorlayerapp/job/temporal"
+	jobtemporal "github.com/gocastsian/roham/vectorlayerapp/job/temporal"
 	"github.com/gocastsian/roham/vectorlayerapp/service"
+	"go.temporal.io/sdk/worker"
 	"log"
 	"log/slog"
 	"os"
@@ -23,6 +24,7 @@ type Application struct {
 	layerRepo  service.Repository
 	layerSrv   service.Service
 	Handler    http.Handler
+	Job        jobtemporal.WorkFlow
 	HTTPServer http.Server
 	Temporal   temporal.Adapter
 	Config     Config
@@ -30,21 +32,22 @@ type Application struct {
 }
 
 func Setup(ctx context.Context, config Config, postgresConn *postgresql.Database, logger *slog.Logger) Application {
-
+	temporalAdp := temporal.New(config.Temporal)
+	workflow := jobtemporal.New(temporalAdp)
 	LayerRepo := repository.NewLayerRepo(postgresConn.DB)
 	LayerValidator := service.NewValidator(LayerRepo)
-	LayerSrv := service.NewService(LayerRepo, LayerValidator)
-	temporalAdp := temporal.New(config.Temporal)
-	Handler := http.NewHandler(LayerSrv, logger, temporalAdp)
+	LayerSrv := service.NewService(LayerRepo, LayerValidator, workflow)
+	Handler := http.NewHandler(LayerSrv, logger)
 
 	return Application{
 		layerRepo:  LayerRepo,
 		layerSrv:   LayerSrv,
 		Handler:    Handler,
 		HTTPServer: http.New(httpserver.New(config.HTTPServer), Handler, logger),
+		Temporal:   temporalAdp,
+		Job:        workflow,
 		Config:     config,
 		Logger:     logger,
-		Temporal:   temporalAdp,
 	}
 }
 
@@ -98,13 +101,12 @@ func startServers(app Application, wg *sync.WaitGroup) {
 func startWorkers(app Application, wg *sync.WaitGroup) {
 	wg.Add(1)
 	go func() {
-		worker := job.New(app.Temporal.Client, "greeting")
+		newWorker := temporal.NewWorker(app.Temporal.GetClient(), "greeting", worker.Options{})
 
-		worker.RegisterWorkflow(app.layerSrv.HealthCheckWorkflow)
-		worker.RegisterActivity(app.layerRepo.HealthCheckActivity)
+		newWorker.RegisterWorkflow(app.Job.HealthCheckWorkflow)
 
-		if err := worker.Start(); err != nil {
-			log.Fatalf("error in running worker with err: %v", err)
+		if err := newWorker.Start(); err != nil {
+			log.Fatalf("error in running newWorker with err: %v", err)
 		}
 	}()
 }

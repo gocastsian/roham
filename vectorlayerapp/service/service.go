@@ -2,25 +2,24 @@ package service
 
 import (
 	"context"
-	"go.temporal.io/sdk/temporal"
-	"go.temporal.io/sdk/workflow"
-	"time"
+	jobtemporal "github.com/gocastsian/roham/vectorlayerapp/job/temporal"
 )
 
 type Repository interface {
 	HealthCheck(ctx context.Context) (string, error)
-	HealthCheckActivity(ctx context.Context, name string) (string, error)
 }
 
 type Service struct {
 	repository Repository
 	validator  Validator
+	workflow   jobtemporal.WorkFlow
 }
 
-func NewService(repo Repository, validator Validator) Service {
+func NewService(repo Repository, validator Validator, workflow jobtemporal.WorkFlow) Service {
 	return Service{
 		repository: repo,
 		validator:  validator,
+		workflow:   workflow,
 	}
 }
 
@@ -32,20 +31,8 @@ func (s Service) HealthCheckSrv(ctx context.Context) (string, error) {
 	return check, nil
 }
 
-func (s Service) HealthCheckWorkflow(ctx workflow.Context, name string) (string, error) {
-	ao := workflow.ActivityOptions{
-		StartToCloseTimeout: 3 * time.Second,
-		RetryPolicy: &temporal.RetryPolicy{
-			InitialInterval:    2 * time.Second,
-			BackoffCoefficient: 1,
-			MaximumInterval:    4 * time.Second,
-			MaximumAttempts:    10,
-		},
-	}
-	ctx = workflow.WithActivityOptions(ctx, ao)
-
-	var res string
-	err := workflow.ExecuteActivity(ctx, s.repository.HealthCheckActivity, name).Get(ctx, &res)
+func (s Service) HealthCheckJob(ctx context.Context, name string) (string, error) {
+	res, err := s.workflow.HealthCheck(ctx, name)
 
 	if err != nil {
 		return "", err

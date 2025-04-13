@@ -16,7 +16,7 @@ type Config struct {
 }
 
 type Adapter struct {
-	Client client.Client
+	client client.Client
 }
 
 func New(config Config) Adapter {
@@ -29,10 +29,14 @@ func New(config Config) Adapter {
 	}
 
 	return Adapter{
-		Client: c,
+		client: c,
 	}
 }
 
+func (a Adapter) GetClient() client.Client {
+	return a.client
+}
+
 func (a Adapter) Shutdown() {
-	a.Client.Close()
+	a.client.Close()
 }

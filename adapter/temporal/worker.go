@@ -1,4 +1,4 @@
-package job
+package temporal
 
 import (
 	"fmt"
@@ -10,8 +10,8 @@ type Worker struct {
 	worker worker.Worker
 }
 
-func New(client client.Client, queueName string) Worker {
-	w := worker.New(client, queueName, worker.Options{})
+func NewWorker(client client.Client, queueName string, options worker.Options) Worker {
+	w := worker.New(client, queueName, options)
 
 	return Worker{worker: w}
 }
