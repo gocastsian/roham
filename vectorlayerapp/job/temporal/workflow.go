@@ -19,14 +19,14 @@ func New(temporal temporal.Adapter) WorkFlow {
 	}
 }
 
-func (w WorkFlow) HealthCheck(ctx context.Context, name string) (string, error) {
+func (w WorkFlow) Greeting(ctx context.Context, name string) (string, error) {
 	workflowId := "test" + uuid.New().String()
 	options := client.StartWorkflowOptions{
 		ID:        workflowId,
 		TaskQueue: GREETING_QUEUE_NAME,
 	}
 
-	we, err := w.temporal.GetClient().ExecuteWorkflow(ctx, options, w.HealthCheckWorkflow, name)
+	we, err := w.temporal.GetClient().ExecuteWorkflow(ctx, options, w.GreetingWorkflow, name)
 	if err != nil {
 		return "", err
 	}
@@ -39,6 +39,6 @@ func (w WorkFlow) HealthCheck(ctx context.Context, name string) (string, error) 
 	return res, nil
 }
 
-func (w WorkFlow) HealthCheckWorkflow(ctx workflow.Context, name string) (string, error) {
+func (w WorkFlow) GreetingWorkflow(ctx workflow.Context, name string) (string, error) {
 	return fmt.Sprintf("hi %s\n", name), nil
 }

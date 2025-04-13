@@ -32,7 +32,7 @@ func (s Service) HealthCheckSrv(ctx context.Context) (string, error) {
 }
 
 func (s Service) HealthCheckJob(ctx context.Context, name string) (string, error) {
-	res, err := s.workflow.HealthCheck(ctx, name)
+	res, err := s.workflow.Greeting(ctx, name)
 
 	if err != nil {
 		return "", err

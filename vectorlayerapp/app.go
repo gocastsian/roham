@@ -103,7 +103,7 @@ func startWorkers(app Application, wg *sync.WaitGroup) {
 	go func() {
 		newWorker := temporal.NewWorker(app.Temporal.GetClient(), "greeting", worker.Options{})
 
-		newWorker.RegisterWorkflow(app.Job.HealthCheckWorkflow)
+		newWorker.RegisterWorkflow(app.Job.GreetingWorkflow)
 
 		if err := newWorker.Start(); err != nil {
 			log.Fatalf("error in running newWorker with err: %v", err)
