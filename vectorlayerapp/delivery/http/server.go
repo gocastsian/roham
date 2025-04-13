@@ -35,6 +35,5 @@ func (s Server) Stop(ctx context.Context) error {
 func (s Server) RegisterRoutes() {
 	v1 := s.HTTPServer.Router.Group("/v1")
 	v1.GET("/health-check", s.Handler.healthCheck)
-	v1.GET("/health-check-job", s.Handler.healthCheckJob)
 
 }

@@ -29,23 +29,3 @@ func (h Handler) healthCheck(c echo.Context) error {
 		"message": check,
 	})
 }
-
-func (h Handler) healthCheckJob(c echo.Context) error {
-	var request struct{ Name string }
-	err := c.Bind(&request)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{
-			"message": err.Error(),
-		})
-	}
-
-	check, err := h.LayerService.HealthCheckJob(c.Request().Context(), request.Name)
-	if err != nil {
-		return c.JSON(http.StatusOK, echo.Map{
-			"message": "Service in Bad mood ):",
-		})
-	}
-	return c.JSON(http.StatusOK, echo.Map{
-		"message": check,
-	})
-}

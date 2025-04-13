@@ -1,5 +1,5 @@
 total_shutdown_timeout:
-  3
+  15s
 
 http_server:
   port: 5002
