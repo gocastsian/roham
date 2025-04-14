@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/gocastsian/roham/types"
 	"log/slog"
 
 	"github.com/gocastsian/roham/userapp/service/user"
@@ -106,7 +107,39 @@ func (repo UserRepo) GetUserByPhoneNumber(ctx context.Context, phoneNumber strin
 
 	return usr, nil
 }
+func (repo UserRepo) CheckUsernameExistence(ctx context.Context, username string) (bool, error) {
+	query := `SELECT EXISTS (SELECT 1 FROM users WHERE username=$1)`
 
+	stmt, err := repo.PostgreSQL.PrepareContext(ctx, query)
+	if err != nil {
+		return false, fmt.Errorf("failed to prepare statement: %w", err)
+	}
+	defer stmt.Close()
+	var exists bool
+	err = stmt.QueryRowContext(ctx, username).Scan(&exists)
+	print(exists)
+	if err != nil {
+		return false, fmt.Errorf("failed to execute prepared statement: %w", err)
+	}
+
+	return exists, nil
+
+}
+func (repo UserRepo) CheckEmailExistence(ctx context.Context, email string) (bool, error) {
+	query := `SELECT EXISTS (SELECT 1 FROM users WHERE email=$1)`
+	stmt, err := repo.PostgreSQL.PrepareContext(ctx, query)
+	if err != nil {
+		return false, fmt.Errorf("failed to prepare statement: %w", err)
+	}
+	defer stmt.Close()
+	var exists bool
+	err = stmt.QueryRowContext(ctx, email).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("failed to execute prepared statement: %w", err)
+	}
+
+	return exists, nil
+}
 func (repo UserRepo) checkUserExist(ctx context.Context, phoneNumber string) (bool, error) {
 
 	query := `
@@ -130,4 +163,31 @@ func (repo UserRepo) checkUserExist(ctx context.Context, phoneNumber string) (bo
 	}
 
 	return true, nil
+}
+func (repo UserRepo) RegisterUser(ctx context.Context, user user.User) (types.ID, error) {
+	query := `INSERT INTO users 
+    			(username,first_name,last_name,email,phone_number,birth_date,role,password_hash) 
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`
+	stmt, err := repo.PostgreSQL.PrepareContext(ctx, query)
+	if err != nil {
+		return 0, fmt.Errorf("failed to prepare statement: %w", err)
+	}
+	defer stmt.Close()
+
+	var id types.ID
+	err = stmt.QueryRowContext(ctx, query,
+		user.Username,     // $1: Username
+		user.FirstName,    // $2: First name
+		user.LastName,     // $3: Last name
+		user.Email,        // $4: Email
+		user.PhoneNumber,  // $5: Phone number
+		user.BirthDate,    // $6: Birth date
+		user.Role,         // $7: Role
+		user.PasswordHash, // $8: Password hash
+	).Scan(&id)
+	if err != nil {
+		return 0, fmt.Errorf("failed to register user: %w", err)
+	}
+
+	return id, nil
 }

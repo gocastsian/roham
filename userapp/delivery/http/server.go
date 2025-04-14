@@ -38,6 +38,7 @@ func (s Server) RegisterRoutes() {
 	v1.GET("/health-check", s.healthCheck)
 	v1.GET("/auth", s.Handler.authenticate)
 	v1.GET("/authz", s.Handler.authorize)
+	v1.POST("/user", s.Handler.registerUser)
 
 	userGroup := v1.Group("/users")
 	userGroup.GET("/", s.Handler.GetAllUsers)

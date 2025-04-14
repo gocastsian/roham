@@ -3,16 +3,20 @@ package user
 import (
 	"context"
 	"fmt"
-	"log/slog"
-
 	errmsg "github.com/gocastsian/roham/pkg/err_msg"
 	"github.com/gocastsian/roham/pkg/password"
+	"github.com/gocastsian/roham/pkg/statuscode"
+	"github.com/gocastsian/roham/types"
 	"github.com/gocastsian/roham/userapp/service/guard"
+	"log/slog"
 )
 
 type Repository interface {
 	GetAllUsers(ctx context.Context) ([]User, error)
 	GetUserByPhoneNumber(ctx context.Context, phoneNumber string) (User, error)
+	CheckUsernameExistence(ctx context.Context, username string) (bool, error)
+	CheckEmailExistence(ctx context.Context, email string) (bool, error)
+	RegisterUser(ctx context.Context, user User) (types.ID, error)
 }
 
 type Service struct {
@@ -110,5 +114,68 @@ func (srv Service) Login(ctx context.Context, loginReq LoginRequest) (LoginRespo
 			AccessToken:  accessTok,
 			RefreshToken: refreshTok,
 		},
+	}, nil
+}
+
+func (srv Service) RegisterUser(ctx context.Context, regReq RegisterRequest) (RegisterResponse, error) {
+	// validate user registration request fields
+	if err := srv.validator.ValidateRegistration(regReq); err != nil {
+		return RegisterResponse{}, err
+	}
+	// check uniqueness of username and email
+	if usernameExist, err := srv.repository.CheckUsernameExistence(ctx, regReq.Username); err != nil {
+		return RegisterResponse{}, errmsg.ErrorResponse{
+			Message: "Application can not detect username existence!",
+			Errors:  map[string]interface{}{"user_Register": err.Error()},
+		}
+	} else if usernameExist {
+		return RegisterResponse{}, errmsg.ErrorResponse{
+			Message:         "user name exist!",
+			InternalErrCode: statuscode.IntCodeUserExistence,
+		}
+	}
+
+	if emailExist, err := srv.repository.CheckEmailExistence(ctx, regReq.Email); err != nil {
+		return RegisterResponse{}, errmsg.ErrorResponse{
+			Message: "Application can not detect email existence!",
+			Errors:  map[string]interface{}{"user_Register": err.Error()},
+		}
+	} else if emailExist {
+		return RegisterResponse{}, errmsg.ErrorResponse{
+			Message:         "email already exist!",
+			InternalErrCode: statuscode.IntCodeUserExistence,
+		}
+	}
+	// prepare user entity for save in storage
+	hashedPassword, err := password.HashPassword(regReq.Password)
+	if err != nil {
+		return RegisterResponse{}, errmsg.ErrorResponse{
+			Message: err.Error(),
+			Errors:  map[string]interface{}{"user_Register": err.Error()},
+		}
+	}
+	var user = User{
+		ID:           0,
+		Username:     regReq.Username,
+		FirstName:    regReq.FirstName,
+		LastName:     regReq.LastName,
+		PhoneNumber:  regReq.PhoneNumber,
+		Email:        regReq.Email,
+		Avatar:       regReq.Avatar,
+		BirthDate:    regReq.BirthDate,
+		IsActive:     true,
+		Role:         0,
+		PasswordHash: hashedPassword,
+	}
+
+	if _, err = srv.repository.RegisterUser(ctx, user); err != nil {
+		return RegisterResponse{}, errmsg.ErrorResponse{
+			Message: "registration failed",
+			Errors:  map[string]interface{}{"user_Register": err.Error()},
+		}
+	}
+
+	return RegisterResponse{
+		ID: user.ID,
 	}, nil
 }

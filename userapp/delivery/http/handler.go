@@ -4,15 +4,14 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"log"
-	"net/http"
-
 	errmsg "github.com/gocastsian/roham/pkg/err_msg"
 	"github.com/gocastsian/roham/pkg/statuscode"
 	"github.com/gocastsian/roham/pkg/validator"
 	"github.com/gocastsian/roham/userapp/service/guard"
 	"github.com/gocastsian/roham/userapp/service/user"
 	"github.com/labstack/echo/v4"
+	"log"
+	"net/http"
 )
 
 type Handler struct {
@@ -139,4 +138,27 @@ func preparePolicyInput(c echo.Context, userClaim guard.UserClaim) (map[string]i
 			"query":  queryParams,
 		},
 	}, nil
+}
+
+func (h Handler) registerUser(c echo.Context) error {
+	var req user.RegisterRequest
+
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, errmsg.ErrorResponse{Message: err.Error()})
+	}
+
+	response, err := h.UserService.RegisterUser(c.Request().Context(), req)
+	if err != nil {
+
+		return c.JSON(statuscode.MapToHTTPStatusCode(err.(errmsg.ErrorResponse)), map[string]interface{}{
+			"message": err.Error(),
+			"errors":  err.(errmsg.ErrorResponse).Errors,
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"message":  "user registered successfully",
+		"response": response,
+	})
+
 }

@@ -13,6 +13,8 @@ const (
 	IntCodeRecordNotFound = "Record not found"
 	IntCodeUnExpected     = "Unexpected issue"
 	IntCodeNotFound       = "Not found"
+	IntCodeUserExistence  = "User already exists"
+	IntCodeUserValidation = "User validation error"
 )
 
 // MapToHTTPStatusCode maps internal error codes to HTTP status codes
@@ -26,6 +28,10 @@ func MapToHTTPStatusCode(err errmsg.ErrorResponse) int {
 		return http.StatusForbidden
 	case IntCodeRecordNotFound:
 		return http.StatusNotFound
+	case IntCodeUnExpected:
+		return http.StatusBadRequest
+	case IntCodeUserValidation:
+		return http.StatusBadRequest
 	}
 	return http.StatusInternalServerError
 }
