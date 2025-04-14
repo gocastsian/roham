@@ -105,8 +105,12 @@ func (v Validator) ValidateRegistration(registerReq RegisterRequest) error {
 	usernameErr := v.ValidateUsername(registerReq.Username)
 	passwordErr := v.ValidatePassword(registerReq.Password)
 	birthDateErr := v.ValidateBirthDate(registerReq.BirthDate)
+	phonenumberErr := v.ValidatePhoneNumber(registerReq.PhoneNumber)
 	errorsMap := make(map[string]interface{})
 
+	if phonenumberErr != nil {
+		errorsMap["phonenumber"] = phonenumberErr.Error()
+	}
 	if birthDateErr != nil {
 		errorsMap["birth_date"] = birthDateErr.Error()
 	}
@@ -125,7 +129,8 @@ func (v Validator) ValidateRegistration(registerReq RegisterRequest) error {
 	if emailErr != nil {
 		errorsMap["email"] = emailErr.Error()
 	}
-	if firstnameErr != nil || lastnameErr != nil || emailErr != nil || usernameErr != nil || passwordErr != nil || birthDateErr != nil {
+	if firstnameErr != nil || lastnameErr != nil || emailErr != nil ||
+		usernameErr != nil || passwordErr != nil || birthDateErr != nil || phonenumberErr != nil {
 		return errmsg.ErrorResponse{
 			Message:         "user validation has error",
 			Errors:          errorsMap,

@@ -17,6 +17,7 @@ type Repository interface {
 	CheckUsernameExistence(ctx context.Context, username string) (bool, error)
 	CheckEmailExistence(ctx context.Context, email string) (bool, error)
 	RegisterUser(ctx context.Context, user User) (types.ID, error)
+	CheckUserUniquness(ctx context.Context, email string, username string, phonenumber string) (bool, error)
 }
 
 type Service struct {
@@ -122,30 +123,19 @@ func (srv Service) RegisterUser(ctx context.Context, regReq RegisterRequest) (Re
 	if err := srv.validator.ValidateRegistration(regReq); err != nil {
 		return RegisterResponse{}, err
 	}
-	// check uniqueness of username and email
-	if usernameExist, err := srv.repository.CheckUsernameExistence(ctx, regReq.Username); err != nil {
+	// check uniqueness of username and email and phonenumber
+	if userExist, err := srv.repository.CheckUserUniquness(ctx, regReq.Email, regReq.Username, regReq.PhoneNumber); err != nil {
 		return RegisterResponse{}, errmsg.ErrorResponse{
-			Message: "Application can not detect username existence!",
+			Message: "Application can not detect user existence!",
 			Errors:  map[string]interface{}{"user_Register": err.Error()},
 		}
-	} else if usernameExist {
+	} else if userExist {
 		return RegisterResponse{}, errmsg.ErrorResponse{
-			Message:         "user name exist!",
+			Message:         "user already exist!",
 			InternalErrCode: statuscode.IntCodeUserExistence,
 		}
 	}
 
-	if emailExist, err := srv.repository.CheckEmailExistence(ctx, regReq.Email); err != nil {
-		return RegisterResponse{}, errmsg.ErrorResponse{
-			Message: "Application can not detect email existence!",
-			Errors:  map[string]interface{}{"user_Register": err.Error()},
-		}
-	} else if emailExist {
-		return RegisterResponse{}, errmsg.ErrorResponse{
-			Message:         "email already exist!",
-			InternalErrCode: statuscode.IntCodeUserExistence,
-		}
-	}
 	// prepare user entity for save in storage
 	hashedPassword, err := password.HashPassword(regReq.Password)
 	if err != nil {
