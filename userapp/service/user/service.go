@@ -119,7 +119,6 @@ func (srv Service) GetUser(ctx context.Context, userID types.ID) (GetAllUsersIte
 
 	user, err := srv.repository.GetUser(ctx, userID)
 	if err != nil {
-		srv.logger.Error("user_GetUser", slog.Any("err", err))
 		return GetAllUsersItem{}, errmsg.ErrorResponse{
 			Message: err.Error(),
 			Errors: map[string]interface{}{
