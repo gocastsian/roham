@@ -166,20 +166,19 @@ func (repo UserRepo) checkUserExist(ctx context.Context, phoneNumber string) (bo
 func (repo UserRepo) CheckUserUniquness(ctx context.Context, email string, username string) (bool, error) {
 	query := `SELECT 
 				EXISTS (SELECT 1 FROM users WHERE username = $1) AS username_exists,
-				EXISTS (SELECT 1 FROM users WHERE email = $2) AS email_exists,
-				EXISTS (SELECT 1 FROM users WHERE phone_number = $3) AS phone_number_exists`
+				EXISTS (SELECT 1 FROM users WHERE email = $2) AS email_exists`
 	stmt, err := repo.PostgreSQL.PrepareContext(ctx, query)
 	if err != nil {
 		return false, fmt.Errorf("failed to prepare statement: %w", err)
 	}
 	defer stmt.Close()
-	var username_exist, email_exist, phonenumber_exist bool
-	err = stmt.QueryRowContext(ctx, username, email).Scan(&username_exist, &email_exist, &phonenumber_exist)
+	var username_exist, email_exist bool
+	err = stmt.QueryRowContext(ctx, username, email).Scan(&username_exist, &email_exist)
 	if err != nil {
 		return false, fmt.Errorf("failed to execute prepared statement: %w", err)
 	}
-	print(username_exist, email_exist, phonenumber_exist)
-	return username_exist || email_exist || phonenumber_exist, nil
+	print(username_exist, email_exist)
+	return username_exist || email_exist, nil
 }
 func (repo UserRepo) RegisterUser(ctx context.Context, user user.User) (types.ID, error) {
 	query := `INSERT INTO users 
