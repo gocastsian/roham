@@ -163,7 +163,7 @@ func (repo UserRepo) checkUserExist(ctx context.Context, phoneNumber string) (bo
 
 	return true, nil
 }
-func (repo UserRepo) CheckUserUniquness(ctx context.Context, email string, username string, phonenumber string) (bool, error) {
+func (repo UserRepo) CheckUserUniquness(ctx context.Context, email string, username string) (bool, error) {
 	query := `SELECT 
 				EXISTS (SELECT 1 FROM users WHERE username = $1) AS username_exists,
 				EXISTS (SELECT 1 FROM users WHERE email = $2) AS email_exists,
@@ -174,7 +174,7 @@ func (repo UserRepo) CheckUserUniquness(ctx context.Context, email string, usern
 	}
 	defer stmt.Close()
 	var username_exist, email_exist, phonenumber_exist bool
-	err = stmt.QueryRowContext(ctx, username, email, phonenumber).Scan(&username_exist, &email_exist, &phonenumber_exist)
+	err = stmt.QueryRowContext(ctx, username, email).Scan(&username_exist, &email_exist, &phonenumber_exist)
 	if err != nil {
 		return false, fmt.Errorf("failed to execute prepared statement: %w", err)
 	}
@@ -183,7 +183,7 @@ func (repo UserRepo) CheckUserUniquness(ctx context.Context, email string, usern
 }
 func (repo UserRepo) RegisterUser(ctx context.Context, user user.User) (types.ID, error) {
 	query := `INSERT INTO users 
-    			(username,first_name,last_name,email,phone_number,birth_date,role,password_hash) 
+    			(username,first_name,last_name,email,role,password_hash) 
 				VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`
 	stmt, err := repo.PostgreSQL.PrepareContext(ctx, query)
 	if err != nil {
@@ -191,18 +191,13 @@ func (repo UserRepo) RegisterUser(ctx context.Context, user user.User) (types.ID
 	}
 	defer stmt.Close()
 
-	var birthDate *string
-	if user.BirthDate == "" {
-		birthDate = nil
-	}
 	var id types.ID
+
 	err = stmt.QueryRowContext(ctx,
 		user.Username,     // $1: Username
 		user.FirstName,    // $2: First name
 		user.LastName,     // $3: Last name
 		user.Email,        // $4: Email
-		user.PhoneNumber,  // $5: Phone number
-		&birthDate,        // $6: Birth date
 		user.Role,         // $7: Role
 		user.PasswordHash, // $8: Password hash
 	).Scan(&id)

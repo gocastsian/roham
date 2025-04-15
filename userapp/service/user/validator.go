@@ -96,11 +96,23 @@ func (v Validator) ValidateEmail(email string) error {
 }
 func (v Validator) ValidatePassword(password string) error {
 	err := validation.Validate(
-
 		password,
 		validation.Length(8, 0),
 		validation.Required.Error(ErrPasswordEmpty),
 		validation.By(validateStrongPassword),
+	)
+	return err
+}
+func (v Validator) ValidateConfirmPassword(confirmPassword string, password string) error {
+	err := validation.Validate(
+		confirmPassword,
+		validation.By(func(value interface{}) error {
+			if confirmPassword != password {
+
+				return errors.New("passwords don't match")
+			}
+			return nil
+		}),
 	)
 	return err
 }
@@ -125,21 +137,20 @@ func validateStrongPassword(value interface{}) error {
 
 	return nil
 }
+
 func (v Validator) ValidateRegistration(registerReq RegisterRequest) error {
 	firstnameErr := v.ValidateFirstName(registerReq.FirstName)
 	lastnameErr := v.ValidateLastName(registerReq.LastName)
 	emailErr := v.ValidateEmail(registerReq.Email)
 	usernameErr := v.ValidateUsername(registerReq.Username)
 	passwordErr := v.ValidatePassword(registerReq.Password)
-	birthDateErr := v.ValidateBirthDate(registerReq.BirthDate)
-	phonenumberErr := v.ValidatePhoneNumber(registerReq.PhoneNumber)
+
+	ConfirmPasswordErr := v.ValidateConfirmPassword(registerReq.ConfirmPassword, registerReq.Password)
+
 	errorsMap := make(map[string]interface{})
 
-	if phonenumberErr != nil {
-		errorsMap["phonenumber"] = phonenumberErr.Error()
-	}
-	if birthDateErr != nil {
-		errorsMap["birth_date"] = birthDateErr.Error()
+	if ConfirmPasswordErr != nil {
+		errorsMap["confirm_password"] = ConfirmPasswordErr.Error()
 	}
 	if passwordErr != nil {
 		errorsMap["password"] = passwordErr.Error()
@@ -156,8 +167,7 @@ func (v Validator) ValidateRegistration(registerReq RegisterRequest) error {
 	if emailErr != nil {
 		errorsMap["email"] = emailErr.Error()
 	}
-	if firstnameErr != nil || lastnameErr != nil || emailErr != nil ||
-		usernameErr != nil || passwordErr != nil || birthDateErr != nil || phonenumberErr != nil {
+	if firstnameErr != nil || lastnameErr != nil || emailErr != nil || usernameErr != nil || passwordErr != nil || ConfirmPasswordErr != nil {
 		return errmsg.ErrorResponse{
 			Message:         "user validation has error",
 			Errors:          errorsMap,

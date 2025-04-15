@@ -17,7 +17,7 @@ type Repository interface {
 	CheckUsernameExistence(ctx context.Context, username string) (bool, error)
 	CheckEmailExistence(ctx context.Context, email string) (bool, error)
 	RegisterUser(ctx context.Context, user User) (types.ID, error)
-	CheckUserUniquness(ctx context.Context, email string, username string, phonenumber string) (bool, error)
+	CheckUserUniquness(ctx context.Context, email string, username string) (bool, error)
 }
 
 type Service struct {
@@ -121,10 +121,11 @@ func (srv Service) Login(ctx context.Context, loginReq LoginRequest) (LoginRespo
 func (srv Service) RegisterUser(ctx context.Context, regReq RegisterRequest) (RegisterResponse, error) {
 	// validate user registration request fields
 	if err := srv.validator.ValidateRegistration(regReq); err != nil {
+
 		return RegisterResponse{}, err
 	}
 	// check uniqueness of username and email and phonenumber
-	if userExist, err := srv.repository.CheckUserUniquness(ctx, regReq.Email, regReq.Username, regReq.PhoneNumber); err != nil {
+	if userExist, err := srv.repository.CheckUserUniquness(ctx, regReq.Email, regReq.Username); err != nil {
 		return RegisterResponse{}, errmsg.ErrorResponse{
 			Message: "Application can not detect user existence!",
 			Errors:  map[string]interface{}{"user_Register": err.Error()},
@@ -149,10 +150,10 @@ func (srv Service) RegisterUser(ctx context.Context, regReq RegisterRequest) (Re
 		Username:     regReq.Username,
 		FirstName:    regReq.FirstName,
 		LastName:     regReq.LastName,
-		PhoneNumber:  regReq.PhoneNumber,
+		PhoneNumber:  "",
 		Email:        regReq.Email,
-		Avatar:       regReq.Avatar,
-		BirthDate:    regReq.BirthDate,
+		Avatar:       "",
+		BirthDate:    "",
 		IsActive:     true,
 		Role:         0,
 		PasswordHash: hashedPassword,

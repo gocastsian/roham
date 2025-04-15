@@ -40,8 +40,8 @@ func (m *MockRepository) RegisterUser(ctx context.Context, u user.User) (types.I
 	return args.Get(0).(types.ID), args.Error(1)
 }
 
-func (m *MockRepository) CheckUserUniquness(ctx context.Context, email string, username string, phonenumber string) (bool, error) {
-	args := m.Called(ctx, email, username, phonenumber)
+func (m *MockRepository) CheckUserUniquness(ctx context.Context, email string, username string) (bool, error) {
+	args := m.Called(ctx, email, username)
 	return args.Bool(0), args.Error(1)
 }
 
@@ -53,15 +53,15 @@ func TestRegisterUser_Success(t *testing.T) {
 	service := user.NewService(mockRepo, userValidator, nil, guardSvc)
 
 	regReq := user.RegisterRequest{
-		Username:    "testuser",
-		FirstName:   "Test",
-		LastName:    "User",
-		PhoneNumber: "1234567890",
-		Email:       "test@example.com",
-		Password:    "s2Securepassword",
+		Username:        "testuser",
+		FirstName:       "Test",
+		LastName:        "User",
+		Email:           "test@example.com",
+		Password:        "s2Securepassword",
+		ConfirmPassword: "s2Securepassword",
 	}
 
-	mockRepo.On("CheckUserUniquness", mock.Anything, regReq.Email, regReq.Username, regReq.PhoneNumber).Return(false, nil)
+	mockRepo.On("CheckUserUniquness", mock.Anything, regReq.Email, regReq.Username).Return(false, nil)
 	mockRepo.On("RegisterUser", mock.Anything, mock.AnythingOfType("user.User")).Return(types.ID(1), nil)
 
 	resp, err := service.RegisterUser(context.Background(), regReq)
@@ -76,15 +76,15 @@ func TestRegisterUser_UserAlreadyExists(t *testing.T) {
 	service := user.NewService(mockRepo, userValidator, nil, nil)
 
 	regReq := user.RegisterRequest{
-		Username:    "testuser",
-		FirstName:   "Test",
-		LastName:    "User",
-		PhoneNumber: "1234567890",
-		Email:       "test@example.com",
-		Password:    "se2Scurepassword",
+		Username:        "testuser",
+		FirstName:       "Test",
+		LastName:        "User",
+		Email:           "test@example.com",
+		Password:        "se2Scurepassword",
+		ConfirmPassword: "se2Scurepassword",
 	}
 
-	mockRepo.On("CheckUserUniquness", mock.Anything, regReq.Email, regReq.Username, regReq.PhoneNumber).Return(true, nil)
+	mockRepo.On("CheckUserUniquness", mock.Anything, regReq.Email, regReq.Username).Return(true, nil)
 
 	_, err := service.RegisterUser(context.Background(), regReq)
 

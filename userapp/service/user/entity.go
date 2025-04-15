@@ -40,12 +40,10 @@ type RegisterResponse struct {
 	ID types.ID `json:"user_id"`
 }
 type RegisterRequest struct {
-	Username    string `json:"username"`
-	FirstName   string `json:"first_name"`
-	LastName    string `json:"last_name"`
-	Email       string `json:"email"`
-	Password    string `json:"password"`
-	Avatar      string `json:"avatar"`
-	BirthDate   string `json:"birth_date"`
-	PhoneNumber string `json:"phone_number"`
+	Username        string `json:"username"`
+	FirstName       string `json:"first_name"`
+	LastName        string `json:"last_name"`
+	Email           string `json:"email"`
+	Password        string `json:"password"`
+	ConfirmPassword string `json:"confirm_password"`
 }
