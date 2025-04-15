@@ -1,9 +1,11 @@
 package user
 
 import (
+	"errors"
 	"github.com/go-ozzo/ozzo-validation/v4/is"
 	"github.com/gocastsian/roham/pkg/statuscode"
 	"regexp"
+	"unicode"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	errmsg "github.com/gocastsian/roham/pkg/err_msg"
@@ -23,6 +25,7 @@ var (
 	ErrLastNameLength               = "last name must be between 4 and 20 characters"
 	ErrEmailEmpty                   = "email can not be empty"
 	ErrPasswordEmpty                = "password can not be empty"
+	ErrPasswordFormat               = "password should contain upper case letter, lower case letter and number"
 	ErrUnvalidDate                  = "unvalid date"
 )
 
@@ -94,9 +97,33 @@ func (v Validator) ValidateEmail(email string) error {
 func (v Validator) ValidatePassword(password string) error {
 	err := validation.Validate(
 
-		password, validation.Required.Error(ErrPasswordEmpty),
+		password,
+		validation.Length(8, 0),
+		validation.Required.Error(ErrPasswordEmpty),
+		validation.By(validateStrongPassword),
 	)
 	return err
+}
+func validateStrongPassword(value interface{}) error {
+	s, _ := value.(string)
+
+	var hasUpper, hasLower, hasDigit bool
+	for _, c := range s {
+		switch {
+		case unicode.IsUpper(c):
+			hasUpper = true
+		case unicode.IsLower(c):
+			hasLower = true
+		case unicode.IsDigit(c):
+			hasDigit = true
+		}
+	}
+
+	if !hasUpper || !hasLower || !hasDigit {
+		return errors.New("password must contain at least one uppercase letter, one lowercase letter, and one number")
+	}
+
+	return nil
 }
 func (v Validator) ValidateRegistration(registerReq RegisterRequest) error {
 	firstnameErr := v.ValidateFirstName(registerReq.FirstName)
