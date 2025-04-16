@@ -3,6 +3,7 @@ package user
 import (
 	"context"
 	"fmt"
+
 	errmsg "github.com/gocastsian/roham/pkg/err_msg"
 	"github.com/gocastsian/roham/pkg/password"
 	"github.com/gocastsian/roham/pkg/statuscode"
@@ -16,6 +17,7 @@ type Repository interface {
 	GetUserByPhoneNumber(ctx context.Context, phoneNumber string) (User, error)
 	RegisterUser(ctx context.Context, user User) (types.ID, error)
 	CheckUserUniquness(ctx context.Context, email string, username string) (bool, error)
+	GetUser(ctx context.Context, ID types.ID) (User, error)
 }
 
 type Service struct {
@@ -166,4 +168,31 @@ func (srv Service) RegisterUser(ctx context.Context, regReq RegisterRequest) (Re
 	return RegisterResponse{
 		ID: user.ID,
 	}, nil
+}
+func (srv Service) GetUser(ctx context.Context, userID types.ID) (GetAllUsersItem, error) {
+
+	user, err := srv.repository.GetUser(ctx, userID)
+	if err != nil {
+		return GetAllUsersItem{}, errmsg.ErrorResponse{
+			Message: err.Error(),
+			Errors: map[string]interface{}{
+				"user_GetUser": err.Error(),
+			},
+		}
+	}
+	responseUser := GetAllUsersItem{
+		ID:          user.ID,
+		Username:    user.Username,
+		FirstName:   user.FirstName,
+		LastName:    user.LastName,
+		Avatar:      user.Avatar,
+		PhoneNumber: user.PhoneNumber,
+		Email:       user.Email,
+		BirthDate:   user.BirthDate,
+		CreatedAt:   user.CreatedAt,
+		UpdatedAt:   user.UpdatedAt,
+		Role:        user.Role,
+	}
+	return responseUser, nil
+
 }

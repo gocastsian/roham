@@ -4,14 +4,17 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+
 	errmsg "github.com/gocastsian/roham/pkg/err_msg"
 	"github.com/gocastsian/roham/pkg/statuscode"
 	"github.com/gocastsian/roham/pkg/validator"
+	"github.com/gocastsian/roham/types"
 	"github.com/gocastsian/roham/userapp/service/guard"
 	"github.com/gocastsian/roham/userapp/service/user"
 	"github.com/labstack/echo/v4"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 type Handler struct {
@@ -140,6 +143,7 @@ func preparePolicyInput(c echo.Context, userClaim guard.UserClaim) (map[string]i
 	}, nil
 }
 
+
 func (h Handler) registerUser(c echo.Context) error {
 	var req user.RegisterRequest
 
@@ -160,5 +164,26 @@ func (h Handler) registerUser(c echo.Context) error {
 		"message":  "user registered successfully",
 		"response": response,
 	})
+}
+
+
+func (h Handler) GetUser(c echo.Context) error {
+	idStr := c.Param("id")
+	userID, err := strconv.Atoi(idStr)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"message": "ID not found.",
+		})
+	}
+
+	res, err := h.UserService.GetUser(c.Request().Context(), types.ID(uint(userID)))
+	if err != nil {
+		if vErr, ok := err.(validator.Error); ok {
+			return c.JSON(vErr.StatusCode(), vErr)
+		}
+		return c.JSON(statuscode.MapToHTTPStatusCode(err.(errmsg.ErrorResponse)), err)
+	}
+
+	return c.JSON(http.StatusOK, res)
 
 }
