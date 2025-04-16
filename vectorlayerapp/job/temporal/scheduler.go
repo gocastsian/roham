@@ -1,32 +1,32 @@
-package jobtemporal
+package temporalscheduler
 
 import (
 	"context"
-	"fmt"
 	"github.com/gocastsian/roham/adapter/temporal"
+	"github.com/gocastsian/roham/vectorlayerapp/service"
 	"github.com/google/uuid"
 	"go.temporal.io/sdk/client"
-	"go.temporal.io/sdk/workflow"
 )
 
-type WorkFlow struct {
+type Scheduler struct {
 	temporal temporal.Adapter
+	service  service.Service
 }
 
-func New(temporal temporal.Adapter) WorkFlow {
-	return WorkFlow{
+func New(temporal temporal.Adapter) Scheduler {
+	return Scheduler{
 		temporal: temporal,
 	}
 }
 
-func (w WorkFlow) Greeting(ctx context.Context, name string) (string, error) {
+func (w Scheduler) ExecuteImportLayer(ctx context.Context, name string) (string, error) {
 	workflowId := "test" + uuid.New().String()
 	options := client.StartWorkflowOptions{
 		ID:        workflowId,
 		TaskQueue: GREETING_QUEUE_NAME,
 	}
 
-	we, err := w.temporal.GetClient().ExecuteWorkflow(ctx, options, w.GreetingWorkflow, name)
+	we, err := w.temporal.GetClient().ExecuteWorkflow(ctx, options, w.service.ImportLayerWorkflow, name)
 	if err != nil {
 		return "", err
 	}
@@ -37,8 +37,4 @@ func (w WorkFlow) Greeting(ctx context.Context, name string) (string, error) {
 	}
 
 	return res, nil
-}
-
-func (w WorkFlow) GreetingWorkflow(ctx workflow.Context, name string) (string, error) {
-	return fmt.Sprintf("hi %s\n", name), nil
 }

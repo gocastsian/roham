@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/gocastsian/roham/adapter/temporal"
-	jobtemporal "github.com/gocastsian/roham/vectorlayerapp/job/temporal"
+	temporalscheduler "github.com/gocastsian/roham/vectorlayerapp/job/temporal"
 	"github.com/gocastsian/roham/vectorlayerapp/service"
 	"go.temporal.io/sdk/worker"
 	"log"
@@ -24,7 +24,7 @@ type Application struct {
 	layerRepo  service.Repository
 	layerSrv   service.Service
 	Handler    http.Handler
-	Job        jobtemporal.WorkFlow
+	Scheduler  temporalscheduler.Scheduler
 	HTTPServer http.Server
 	Temporal   temporal.Adapter
 	Config     Config
@@ -33,10 +33,10 @@ type Application struct {
 
 func Setup(ctx context.Context, config Config, postgresConn *postgresql.Database, logger *slog.Logger) Application {
 	temporalAdp := temporal.New(config.Temporal)
-	workflow := jobtemporal.New(temporalAdp)
+	scheduler := temporalscheduler.New(temporalAdp)
 	LayerRepo := repository.NewLayerRepo(postgresConn.DB)
 	LayerValidator := service.NewValidator(LayerRepo)
-	LayerSrv := service.NewService(LayerRepo, LayerValidator, workflow)
+	LayerSrv := service.NewService(LayerRepo, LayerValidator, scheduler)
 	Handler := http.NewHandler(LayerSrv, logger)
 
 	return Application{
@@ -45,7 +45,7 @@ func Setup(ctx context.Context, config Config, postgresConn *postgresql.Database
 		Handler:    Handler,
 		HTTPServer: http.New(httpserver.New(config.HTTPServer), Handler, logger),
 		Temporal:   temporalAdp,
-		Job:        workflow,
+		Scheduler:  scheduler,
 		Config:     config,
 		Logger:     logger,
 	}
@@ -103,7 +103,7 @@ func startWorkers(app Application, wg *sync.WaitGroup) {
 	go func() {
 		newWorker := temporal.NewWorker(app.Temporal.GetClient(), "greeting", worker.Options{})
 
-		newWorker.RegisterWorkflow(app.Job.GreetingWorkflow)
+		newWorker.RegisterWorkflow(app.layerSrv.ImportLayerWorkflow)
 
 		if err := newWorker.Start(); err != nil {
 			log.Fatalf("error in running newWorker with err: %v", err)
@@ -116,9 +116,15 @@ func (app Application) shutdownServers(ctx context.Context) bool {
 
 	go func() {
 		var shutdownWg sync.WaitGroup
+
 		shutdownWg.Add(1)
 		go app.shutdownHTTPServer(&shutdownWg)
 		shutdownWg.Wait()
+
+		shutdownWg.Add(1)
+		go app.shutdownTemporal(&shutdownWg)
+		shutdownWg.Wait()
+
 		close(shutdownDone)
 	}()
 
@@ -140,4 +146,9 @@ func (app Application) shutdownHTTPServer(wg *sync.WaitGroup) {
 			slog.Any("err", err),
 		)
 	}
+}
+
+func (app Application) shutdownTemporal(wg *sync.WaitGroup) {
+	defer wg.Done()
+	app.Temporal.Shutdown()
 }
