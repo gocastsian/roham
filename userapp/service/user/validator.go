@@ -62,7 +62,7 @@ func (v Validator) ValidateUsername(username string) error {
 	err := validation.Validate(
 		username,
 		validation.Required.Error(ErrUsernameEmpty),
-		validation.Match(regexp.MustCompile(`^(\D){4,20}$`)).Error(ErrUsernameFormat),
+		validation.Match(regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]{2,19}`)).Error(ErrUsernameFormat),
 		validation.Length(4, 20).Error(ErrUsernameLength),
 	)
 	return err
