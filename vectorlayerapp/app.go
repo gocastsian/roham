@@ -3,7 +3,11 @@ package vectorlayerapp
 import (
 	"context"
 	"fmt"
+	"github.com/gocastsian/roham/adapter/temporal"
+	temporalscheduler "github.com/gocastsian/roham/vectorlayerapp/job/temporal"
 	"github.com/gocastsian/roham/vectorlayerapp/service"
+	"go.temporal.io/sdk/worker"
+	"log"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -20,16 +24,19 @@ type Application struct {
 	layerRepo  service.Repository
 	layerSrv   service.Service
 	Handler    http.Handler
+	Scheduler  temporalscheduler.Scheduler
 	HTTPServer http.Server
+	Temporal   temporal.Adapter
 	Config     Config
 	Logger     *slog.Logger
 }
 
 func Setup(ctx context.Context, config Config, postgresConn *postgresql.Database, logger *slog.Logger) Application {
-
+	temporalAdp := temporal.New(config.Temporal)
+	scheduler := temporalscheduler.New(temporalAdp)
 	LayerRepo := repository.NewLayerRepo(postgresConn.DB)
 	LayerValidator := service.NewValidator(LayerRepo)
-	LayerSrv := service.NewService(LayerRepo, LayerValidator)
+	LayerSrv := service.NewService(LayerRepo, LayerValidator, scheduler)
 	Handler := http.NewHandler(LayerSrv, logger)
 
 	return Application{
@@ -37,6 +44,8 @@ func Setup(ctx context.Context, config Config, postgresConn *postgresql.Database
 		layerSrv:   LayerSrv,
 		Handler:    Handler,
 		HTTPServer: http.New(httpserver.New(config.HTTPServer), Handler, logger),
+		Temporal:   temporalAdp,
+		Scheduler:  scheduler,
 		Config:     config,
 		Logger:     logger,
 	}
@@ -49,6 +58,8 @@ func (app Application) Start() {
 	defer stop()
 
 	startServers(app, &wg)
+	startWorkers(app, &wg)
+
 	<-ctx.Done()
 	app.Logger.Info("Shutdown signal received...")
 
@@ -87,14 +98,33 @@ func startServers(app Application, wg *sync.WaitGroup) {
 	}()
 }
 
+func startWorkers(app Application, wg *sync.WaitGroup) {
+	wg.Add(1)
+	go func() {
+		newWorker := temporal.NewWorker(app.Temporal.GetClient(), "greeting", worker.Options{})
+
+		newWorker.RegisterWorkflow(app.layerSrv.ImportLayerWorkflow)
+
+		if err := newWorker.Start(); err != nil {
+			log.Fatalf("error in running newWorker with err: %v", err)
+		}
+	}()
+}
+
 func (app Application) shutdownServers(ctx context.Context) bool {
 	shutdownDone := make(chan struct{})
 
 	go func() {
 		var shutdownWg sync.WaitGroup
+
 		shutdownWg.Add(1)
 		go app.shutdownHTTPServer(&shutdownWg)
 		shutdownWg.Wait()
+
+		shutdownWg.Add(1)
+		go app.shutdownTemporal(&shutdownWg)
+		shutdownWg.Wait()
+
 		close(shutdownDone)
 	}()
 
@@ -116,4 +146,9 @@ func (app Application) shutdownHTTPServer(wg *sync.WaitGroup) {
 			slog.Any("err", err),
 		)
 	}
+}
+
+func (app Application) shutdownTemporal(wg *sync.WaitGroup) {
+	defer wg.Done()
+	app.Temporal.Shutdown()
 }
