@@ -143,8 +143,7 @@ func preparePolicyInput(c echo.Context, userClaim guard.UserClaim) (map[string]i
 	}, nil
 }
 
-
-func (h Handler) registerUser(c echo.Context) error {
+func (h Handler) RegisterUser(c echo.Context) error {
 	var req user.RegisterRequest
 
 	if err := c.Bind(&req); err != nil {
@@ -160,12 +159,11 @@ func (h Handler) registerUser(c echo.Context) error {
 		})
 	}
 
-	return c.JSON(http.StatusOK, map[string]interface{}{
+	return c.JSON(http.StatusCreated, map[string]interface{}{
 		"message":  "user registered successfully",
 		"response": response,
 	})
 }
-
 
 func (h Handler) GetUser(c echo.Context) error {
 	idStr := c.Param("id")
