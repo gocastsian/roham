@@ -40,13 +40,13 @@ func (h Handler) GetAllUsers(c echo.Context) error {
 }
 
 func (h Handler) Login(c echo.Context) error {
-	var req user.LoginRequest
+	var request user.LoginRequest
 
-	if err := c.Bind(&req); err != nil {
+	if err := c.Bind(&request); err != nil {
 		return c.JSON(http.StatusBadRequest, errmsg.ErrorResponse{Message: errmsg.ErrInvalidRequestFormat.Error()})
 	}
 
-	resp, err := h.UserService.Login(c.Request().Context(), req)
+	resp, err := h.UserService.Login(c.Request().Context(), request)
 	if err != nil {
 		if vErr, ok := err.(validator.Error); ok {
 			return c.JSON(vErr.StatusCode(), vErr)
