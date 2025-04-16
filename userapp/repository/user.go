@@ -106,39 +106,7 @@ func (repo UserRepo) GetUserByPhoneNumber(ctx context.Context, phoneNumber strin
 
 	return usr, nil
 }
-func (repo UserRepo) CheckUsernameExistence(ctx context.Context, username string) (bool, error) {
-	query := `SELECT EXISTS (SELECT 1 FROM users WHERE username=$1)`
 
-	stmt, err := repo.PostgreSQL.PrepareContext(ctx, query)
-	if err != nil {
-		return false, fmt.Errorf("failed to prepare statement: %w", err)
-	}
-	defer stmt.Close()
-	var exists bool
-	err = stmt.QueryRowContext(ctx, username).Scan(&exists)
-	print(exists)
-	if err != nil {
-		return false, fmt.Errorf("failed to execute prepared statement: %w", err)
-	}
-
-	return exists, nil
-
-}
-func (repo UserRepo) CheckEmailExistence(ctx context.Context, email string) (bool, error) {
-	query := `SELECT EXISTS (SELECT 1 FROM users WHERE email=$1)`
-	stmt, err := repo.PostgreSQL.PrepareContext(ctx, query)
-	if err != nil {
-		return false, fmt.Errorf("failed to prepare statement: %w", err)
-	}
-	defer stmt.Close()
-	var exists bool
-	err = stmt.QueryRowContext(ctx, email).Scan(&exists)
-	if err != nil {
-		return false, fmt.Errorf("failed to execute prepared statement: %w", err)
-	}
-
-	return exists, nil
-}
 func (repo UserRepo) checkUserExist(ctx context.Context, phoneNumber string) (bool, error) {
 
 	query := `

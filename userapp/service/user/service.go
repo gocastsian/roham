@@ -14,8 +14,6 @@ import (
 type Repository interface {
 	GetAllUsers(ctx context.Context) ([]User, error)
 	GetUserByPhoneNumber(ctx context.Context, phoneNumber string) (User, error)
-	CheckUsernameExistence(ctx context.Context, username string) (bool, error)
-	CheckEmailExistence(ctx context.Context, email string) (bool, error)
 	RegisterUser(ctx context.Context, user User) (types.ID, error)
 	CheckUserUniquness(ctx context.Context, email string, username string) (bool, error)
 }
@@ -121,7 +119,6 @@ func (srv Service) Login(ctx context.Context, loginReq LoginRequest) (LoginRespo
 func (srv Service) RegisterUser(ctx context.Context, regReq RegisterRequest) (RegisterResponse, error) {
 	// validate user registration request fields
 	if err := srv.validator.ValidateRegistration(regReq); err != nil {
-
 		return RegisterResponse{}, err
 	}
 	// check uniqueness of username and email and phonenumber

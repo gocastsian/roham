@@ -25,16 +25,6 @@ func (m *MockRepository) GetUserByPhoneNumber(ctx context.Context, phoneNumber s
 	return args.Get(0).(user.User), args.Error(1)
 }
 
-func (m *MockRepository) CheckUsernameExistence(ctx context.Context, username string) (bool, error) {
-	args := m.Called(ctx, username)
-	return args.Bool(0), args.Error(1)
-}
-
-func (m *MockRepository) CheckEmailExistence(ctx context.Context, email string) (bool, error) {
-	args := m.Called(ctx, email)
-	return args.Bool(0), args.Error(1)
-}
-
 func (m *MockRepository) RegisterUser(ctx context.Context, u user.User) (types.ID, error) {
 	args := m.Called(ctx, u)
 	return args.Get(0).(types.ID), args.Error(1)
