@@ -1,9 +1,8 @@
 package user
 
 import (
-	"time"
-
 	"github.com/gocastsian/roham/types"
+	"time"
 )
 
 type User struct {
@@ -36,4 +35,15 @@ type LoginResponse struct {
 type Tokens struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
+}
+type RegisterResponse struct {
+	ID types.ID `json:"user_id"`
+}
+type RegisterRequest struct {
+	Username        string `json:"username"`
+	FirstName       string `json:"first_name"`
+	LastName        string `json:"last_name"`
+	Email           string `json:"email"`
+	Password        string `json:"password"`
+	ConfirmPassword string `json:"confirm_password"`
 }
