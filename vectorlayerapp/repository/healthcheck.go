@@ -30,7 +30,3 @@ func (r LayerRepo) HealthCheck(ctx context.Context) (string, error) {
 
 	return "everything is ok", nil
 }
-
-func (r LayerRepo) HealthCheckActivity(ctx context.Context, name string) (string, error) {
-	return fmt.Sprintf("hi %v temporal is ok", name), nil
-}
