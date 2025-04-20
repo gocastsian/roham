@@ -13,7 +13,6 @@ const (
 	IntCodeRecordNotFound = "Record not found"
 	IntCodeUnExpected     = "Unexpected issue"
 	IntCodeNotFound       = "Not found"
-	IntCodeUserExistence  = "User already exists"
 	IntCodeValidation     = "User validation error"
 )
 

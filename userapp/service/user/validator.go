@@ -171,7 +171,7 @@ func (v Validator) ValidateRegistration(registerReq RegisterRequest) error {
 		return errmsg.ErrorResponse{
 			Message:         "user validation has error",
 			Errors:          errorsMap,
-			InternalErrCode: statuscode.IntCodeUserValidation,
+			InternalErrCode: statuscode.IntCodeValidation,
 		}
 	}
 	return nil
