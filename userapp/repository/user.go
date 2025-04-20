@@ -150,8 +150,8 @@ func (repo UserRepo) CheckUserUniquness(ctx context.Context, email string, usern
 }
 func (repo UserRepo) RegisterUser(ctx context.Context, user user.User) (types.ID, error) {
 	query := `INSERT INTO users 
-    			(username,first_name,last_name,email,role,password_hash,is_active) 
-				VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`
+    			(username,first_name,last_name,email,role,password_hash) 
+				VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`
 	stmt, err := repo.PostgreSQL.PrepareContext(ctx, query)
 	if err != nil {
 		return 0, fmt.Errorf("failed to prepare statement: %w", err)
@@ -167,7 +167,6 @@ func (repo UserRepo) RegisterUser(ctx context.Context, user user.User) (types.ID
 		user.Email,        // $4
 		user.Role,         // $5
 		user.PasswordHash, // $6
-		true,              // $7
 	).Scan(&id)
 	if err != nil {
 		return 0, fmt.Errorf("failed to register user: %w", err)

@@ -123,7 +123,7 @@ func (srv Service) RegisterUser(ctx context.Context, regReq RegisterRequest) (Re
 	if err := srv.validator.ValidateRegistration(regReq); err != nil {
 		return RegisterResponse{}, err
 	}
-	// check uniqueness of username and email and phonenumber
+	// check uniqueness of username and email
 	if userExist, err := srv.repository.CheckUserUniquness(ctx, regReq.Email, regReq.Username); err != nil {
 		return RegisterResponse{}, errmsg.ErrorResponse{
 			Message: "Application can not detect user existence!",

@@ -41,9 +41,9 @@ func TestRegisterUser(t *testing.T) {
 
 	logger := slog.Default()
 	repo := NewUserRepo(Config{}, db, logger)
-	mock.ExpectPrepare(`INSERT INTO users \(username,first_name,last_name,email,role,password_hash,is_active\) VALUES \(\$1, \$2, \$3, \$4, \$5, \$6, \$7\) RETURNING id`).
+	mock.ExpectPrepare(`INSERT INTO users \(username,first_name,last_name,email,role,password_hash\) VALUES \(\$1, \$2, \$3, \$4, \$5, \$6\) RETURNING id`).
 		ExpectQuery().
-		WithArgs("test", "firstname", "lastname", "email@gmail.com", 0, "password_hash", true).
+		WithArgs("test", "firstname", "lastname", "email@gmail.com", 0, "password_hash").
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 	ctx := context.Background()
 	user := user.User{
@@ -53,7 +53,6 @@ func TestRegisterUser(t *testing.T) {
 		LastName:     "lastname",
 		Email:        "email@gmail.com",
 		Avatar:       "",
-		IsActive:     true,
 		Role:         0,
 		PasswordHash: "password_hash",
 	}
