@@ -72,5 +72,5 @@ func (m *UserRepoMock) GetUser(ctx context.Context, ID types.ID) (user.User, err
 			return u, nil
 		}
 	}
-	return user.User{}, fmt.Errorf(RepoErr)
+	return user.User{}, nil
 }
