@@ -132,6 +132,7 @@ func (srv Service) RegisterUser(ctx context.Context, regReq RegisterRequest) (Re
 	} else if userExist {
 		return RegisterResponse{}, errmsg.ErrorResponse{
 			Message:         "user already exist!",
+			Errors:          map[string]interface{}{},
 			InternalErrCode: statuscode.IntCodeValidation,
 		}
 	}
@@ -158,11 +159,13 @@ func (srv Service) RegisterUser(ctx context.Context, regReq RegisterRequest) (Re
 		PasswordHash: hashedPassword,
 	}
 
-	if _, err = srv.repository.RegisterUser(ctx, user); err != nil {
+	if newUserId, err := srv.repository.RegisterUser(ctx, user); err != nil {
 		return RegisterResponse{}, errmsg.ErrorResponse{
 			Message: "registration failed",
 			Errors:  map[string]interface{}{"user_Register": err.Error()},
 		}
+	} else {
+		user.ID = newUserId
 	}
 
 	return RegisterResponse{
