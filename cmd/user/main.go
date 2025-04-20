@@ -32,7 +32,8 @@ func main() {
 	if err := cfgloader.Load(options, &cfg); err != nil {
 		log.Fatalf("Failed to load userapp config: %v", err)
 	}
-
+	fmt.Printf("Userapp config loaded from %v\n", cfg.Guard)
+	fmt.Printf("Userapp config loaded from %v\n", cfg.User)
 	logger.Init(cfg.Logger)
 	userLogger := logger.L()
 

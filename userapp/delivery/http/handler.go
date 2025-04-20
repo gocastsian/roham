@@ -162,3 +162,28 @@ func (h Handler) GetUser(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, res)
 }
+
+func (h Handler) UploadAvatar(c echo.Context) error {
+
+	userInfoHeader := c.Request().Header.Get("X-User-Info")
+	decoded, _ := base64.StdEncoding.DecodeString(userInfoHeader)
+
+	var userClaim guard.UserClaim
+	_ = json.Unmarshal(decoded, &userClaim)
+
+	file, handler, err := c.Request().FormFile("avatar")
+
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, errmsg.ErrorResponse{Message: errmsg.ErrInvalidRequestFormat.Error()})
+	}
+	defer file.Close()
+	var avatar = user.Avatar{FileHandler: handler, File: file}
+	if err := h.UserService.UpdateUserAvatar(c.Request().Context(), userClaim.ID, avatar); err != nil {
+		return c.JSON(statuscode.MapToHTTPStatusCode(err.(errmsg.ErrorResponse)), map[string]interface{}{
+			"message": err.Error(),
+			"errors":  err.(errmsg.ErrorResponse).Errors,
+		})
+	}
+	return c.NoContent(http.StatusOK)
+
+}

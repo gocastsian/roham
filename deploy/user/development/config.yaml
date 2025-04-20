@@ -16,8 +16,8 @@ cache_config:
   write_ttl: "10s"
 
 postgres_db:
-  host: user-db
-  port: 5432
+  host: localhost
+  port: 5433
   user: "user_admin"
   password: "password123"
   db_name: user_db
@@ -37,6 +37,14 @@ logger:
   file_max_size_in_mb: 10
   file_max_age_in_days: 7
 
+user:
+  avatar:
+    upload_file_dir: "./public/uploads/avatars/"
+    maximum_file_size: 3 # MB
+    valid_image_formats:
+      - "image/png"
+      - "image/jpeg"
+
 guard:
   sign_key: "roham"
   access_expiration_time: 30m
@@ -48,3 +56,5 @@ guard:
     rule: "allow"
     policy: "./deploy/user/development/user.rego"
     is_path: true
+
+

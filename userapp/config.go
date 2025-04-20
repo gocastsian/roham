@@ -1,6 +1,7 @@
 package userapp
 
 import (
+	"github.com/gocastsian/roham/userapp/service/user"
 	"time"
 
 	httpserver "github.com/gocastsian/roham/pkg/http_server"
@@ -17,4 +18,5 @@ type Config struct {
 	Logger               logger.Config     `koanf:"logger"`
 	TotalShutdownTimeout time.Duration     `koanf:"total_shutdown_timeout"`
 	Guard                guard.Config      `koanf:"guard"`
+	User                 user.Config       `koanf:"user"`
 }
