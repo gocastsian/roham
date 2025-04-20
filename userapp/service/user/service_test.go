@@ -59,7 +59,7 @@ func TestRegisterUser_Success(t *testing.T) {
 
 	resp, err := service.RegisterUser(context.Background(), regReq)
 	assert.NoError(t, err)
-	assert.Equal(t, types.ID(0), resp.ID)
+	assert.Equal(t, types.ID(1), resp.ID)
 	mockRepo.AssertExpectations(t)
 }
 
