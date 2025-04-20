@@ -146,7 +146,6 @@ func (repo UserRepo) CheckUserUniquness(ctx context.Context, email string, usern
 	if err != nil {
 		return false, fmt.Errorf("failed to execute prepared statement: %w", err)
 	}
-	print(username_exist, email_exist)
 	return username_exist || email_exist, nil
 }
 func (repo UserRepo) RegisterUser(ctx context.Context, user user.User) (types.ID, error) {
