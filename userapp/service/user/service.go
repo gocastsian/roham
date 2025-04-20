@@ -132,7 +132,7 @@ func (srv Service) RegisterUser(ctx context.Context, regReq RegisterRequest) (Re
 	} else if userExist {
 		return RegisterResponse{}, errmsg.ErrorResponse{
 			Message:         "user already exist!",
-			InternalErrCode: statuscode.IntCodeUserExistence,
+			InternalErrCode: statuscode.IntCodeValidation,
 		}
 	}
 

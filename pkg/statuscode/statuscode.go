@@ -13,7 +13,7 @@ const (
 	IntCodeRecordNotFound = "Record not found"
 	IntCodeUnExpected     = "Unexpected issue"
 	IntCodeNotFound       = "Not found"
-	IntCodeValidation     = "User validation error"
+	IntCodeValidation     = "validation error"
 )
 
 // MapToHTTPStatusCode maps internal error codes to HTTP status codes
