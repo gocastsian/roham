@@ -175,17 +175,7 @@ func (repo UserRepo) RegisterUser(ctx context.Context, user user.User) (types.ID
 	return id, nil
 }
 func (repo UserRepo) GetUser(ctx context.Context, ID types.ID) (user.User, error) {
-	// Check if the user exists
-	exists, err := repo.checkUserExistByID(ctx, ID)
-	if err != nil {
-		return user.User{}, fmt.Errorf("failed to check user existence: %w", err)
-	}
 
-	if !exists {
-		return user.User{}, fmt.Errorf("the user not found")
-	}
-
-	// Query to fetch the user's details
 	query := "SELECT id, username, first_name, last_name, email, phone_number, birth_date, created_at, updated_at, role FROM users WHERE ID=$1"
 	stmt, err := repo.PostgreSQL.PrepareContext(ctx, query)
 	if err != nil {
@@ -207,34 +197,12 @@ func (repo UserRepo) GetUser(ctx context.Context, ID types.ID) (user.User, error
 		&usr.Role,
 	)
 	if err != nil {
-		return user.User{}, fmt.Errorf("failed to execute query: %w", err)
+		if err == sql.ErrNoRows {
+			return user.User{}, fmt.Errorf("the user not found")
+		} else {
+			return user.User{}, fmt.Errorf("failed to execute query: %w", err)
+		}
 	}
 
 	return usr, nil
-}
-
-func (repo UserRepo) checkUserExistByID(ctx context.Context, ID types.ID) (bool, error) {
-
-	query := `
-		SELECT EXISTS (
-			SELECT 1
-			FROM users
-			WHERE ID = $1
-		)
-	`
-
-	stmt, err := repo.PostgreSQL.PrepareContext(ctx, query)
-	if err != nil {
-		return false, fmt.Errorf("failed to prepare statement: %w", err)
-	}
-	defer stmt.Close()
-
-	var exists bool
-	err = stmt.QueryRowContext(ctx, ID).Scan(&exists)
-	if err != nil {
-		return false, fmt.Errorf("failed to execute prepared statement: %w", err)
-	}
-
-	return exists, nil
-
 }

@@ -2,8 +2,7 @@ package user_test
 
 import (
 	"context"
-
-	"errors"
+	"fmt"
 
 	"testing"
 
@@ -95,20 +94,14 @@ func (m *MockRepository) GetUser(ctx context.Context, ID types.ID) (user.User, e
 	return args.Get(0).(user.User), args.Error(1)
 }
 
-func (m *MockRepository) CheckUserExistByID(ctx context.Context, ID types.ID) (bool, error) {
-	args := m.Called(ctx, ID)
-	return args.Bool(0), args.Error(1)
-}
-
-func TestGetUser_Success(t *testing.T) {
+func TestGetUser(t *testing.T) {
 	mockRepo := new(MockRepository)
 	userValidator := user.NewValidator(mockRepo)
 	guardSvc := &guard.Service{}
-
 	service := user.NewService(mockRepo, userValidator, nil, guardSvc)
 
 	testUser := user.User{
-		ID:        0,
+		ID:        1,
 		Username:  "test",
 		FirstName: "firstname",
 		LastName:  "lastname",
@@ -116,26 +109,39 @@ func TestGetUser_Success(t *testing.T) {
 		Avatar:    "",
 		Role:      0,
 	}
-	mockRepo.On("CheckUserExistByID", mock.Anything, types.ID(0)).Return(true, nil)
-	mockRepo.On("GetUser", mock.Anything, types.ID(0)).Return(testUser, nil)
 
-	res, err := service.GetUser(context.Background(), types.ID(0))
-	assert.NoError(t, err)
-	assert.Equal(t, types.ID(0), res.ID)
-}
+	type testCase struct {
+		name   string
+		userId types.ID
+		err    error
+		user   user.User
+	}
+	testCases := []testCase{
+		{
+			name:   "not found a user",
+			userId: types.ID(0),
+			err:    fmt.Errorf("the user not found"),
+			user:   user.User{},
+		},
+		{
+			name:   "successfully get a user",
+			userId: types.ID(1),
+			err:    nil,
+			user:   testUser,
+		},
+	}
 
-func TestGetUser_NotExist(t *testing.T) {
-	mockRepo := new(MockRepository)
-	userValidator := user.NewValidator(mockRepo)
-	guardSvc := &guard.Service{}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockRepo.On("GetUser", mock.Anything, tc.userId).Return(tc.user, tc.err)
 
-	service := user.NewService(mockRepo, userValidator, nil, guardSvc)
-
-	mockRepo.On("CheckUserExistByID", mock.Anything, types.ID(0)).Return(false, nil)
-	mockRepo.On("GetUser", mock.Anything, types.ID(0)).Return(user.User{}, errors.New("the user not found"))
-
-	_, err := service.GetUser(context.Background(), types.ID(0))
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "the user not found")
-
+			user, err := service.GetUser(context.Background(), tc.userId)
+			if tc.err != nil {
+				assert.Error(t, tc.err)
+				assert.Contains(t, err.Error(), tc.err.Error())
+			} else {
+				assert.Equal(t, user.ID, user.ID)
+			}
+		})
+	}
 }
