@@ -23,3 +23,10 @@ type GetAllUsersItem struct {
 type GetAllUsersResponse struct {
 	Users []GetAllUsersItem `json:"users"`
 }
+
+type GetUserItem struct {
+	ID        types.ID `json:"id"`
+	Username  string   `json:"username"`
+	FirstName string   `json:"first_name"`
+	LastName  string   `json:"last_name"`
+}

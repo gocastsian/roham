@@ -172,29 +172,23 @@ func (srv Service) RegisterUser(ctx context.Context, regReq RegisterRequest) (Re
 		ID: user.ID,
 	}, nil
 }
-func (srv Service) GetUser(ctx context.Context, userID types.ID) (GetAllUsersItem, error) {
+
+func (srv Service) GetUser(ctx context.Context, userID types.ID) (GetUserItem, error) {
 
 	user, err := srv.repository.GetUser(ctx, userID)
 	if err != nil {
-		return GetAllUsersItem{}, errmsg.ErrorResponse{
+		return GetUserItem{}, errmsg.ErrorResponse{
 			Message: err.Error(),
 			Errors: map[string]interface{}{
 				"user_GetUser": err.Error(),
 			},
 		}
 	}
-	responseUser := GetAllUsersItem{
-		ID:          user.ID,
-		Username:    user.Username,
-		FirstName:   user.FirstName,
-		LastName:    user.LastName,
-		Avatar:      user.Avatar,
-		PhoneNumber: user.PhoneNumber,
-		Email:       user.Email,
-		BirthDate:   user.BirthDate,
-		CreatedAt:   user.CreatedAt,
-		UpdatedAt:   user.UpdatedAt,
-		Role:        user.Role,
+	responseUser := GetUserItem{
+		ID:        user.ID,
+		Username:  user.Username,
+		FirstName: user.FirstName,
+		LastName:  user.LastName,
 	}
 	return responseUser, nil
 
