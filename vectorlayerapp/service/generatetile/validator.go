@@ -1,4 +1,4 @@
-package service
+package generatetile
 
 type ValidatorRepository interface {
 }

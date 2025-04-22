@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"github.com/gocastsian/roham/adapter/temporal"
 	temporalscheduler "github.com/gocastsian/roham/vectorlayerapp/job/temporal"
-	"github.com/gocastsian/roham/vectorlayerapp/service"
+	"github.com/gocastsian/roham/vectorlayerapp/service/generatetile"
+	"github.com/gocastsian/roham/vectorlayerapp/service/importlayer"
 	"go.temporal.io/sdk/worker"
 	"log"
 	"log/slog"
@@ -21,33 +22,49 @@ import (
 )
 
 type Application struct {
-	layerRepo  service.Repository
-	layerSrv   service.Service
-	Handler    http.Handler
-	Scheduler  temporalscheduler.Scheduler
-	HTTPServer http.Server
-	Temporal   temporal.Adapter
-	Config     Config
-	Logger     *slog.Logger
+	ShutdownCtx   context.Context
+	tileRepo      generatetile.Repository
+	importRepo    importlayer.Repository
+	tileService   generatetile.Service
+	importService importlayer.Service
+	tileHandler   http.GenLayerHandler
+	importHandler http.ImportLayerHandler
+	HTTPServer    http.Server
+	Config        Config
+	Logger        *slog.Logger
+	Scheduler     temporalscheduler.Scheduler
+	Temporal      temporal.Adapter
 }
 
 func Setup(ctx context.Context, config Config, postgresConn *postgresql.Database, logger *slog.Logger) Application {
 	temporalAdp := temporal.New(config.Temporal)
 	scheduler := temporalscheduler.New(temporalAdp)
-	LayerRepo := repository.NewLayerRepo(postgresConn.DB)
-	LayerValidator := service.NewValidator(LayerRepo)
-	LayerSrv := service.NewService(LayerRepo, LayerValidator, scheduler)
-	Handler := http.NewHandler(LayerSrv, logger)
+
+	tileRepo := repository.NewTileRepo(postgresConn.DB)
+	tileValidator := generatetile.NewValidator(tileRepo)
+	tileService := generatetile.NewService(tileRepo, tileValidator)
+	tileHandler := http.NewGenLayerHandler(tileService, logger)
+
+	importRepo := repository.NewImportRepo(postgresConn.DB)
+	importValidator := importlayer.NewValidator(importRepo)
+	importService := importlayer.NewService(importRepo, importValidator, scheduler)
+	importHandler := http.NewImportLayerHandler(importService, logger)
+
+	server := http.New(httpserver.New(config.HTTPServer), tileHandler, importHandler, logger)
 
 	return Application{
-		layerRepo:  LayerRepo,
-		layerSrv:   LayerSrv,
-		Handler:    Handler,
-		HTTPServer: http.New(httpserver.New(config.HTTPServer), Handler, logger),
-		Temporal:   temporalAdp,
-		Scheduler:  scheduler,
-		Config:     config,
-		Logger:     logger,
+		Temporal:      temporalAdp,
+		Scheduler:     scheduler,
+		Config:        config,
+		Logger:        logger,
+		ShutdownCtx:   ctx,
+		tileRepo:      tileRepo,
+		importRepo:    importRepo,
+		tileService:   tileService,
+		importService: importService,
+		tileHandler:   tileHandler,
+		importHandler: importHandler,
+		HTTPServer:    server,
 	}
 }
 
@@ -103,7 +120,7 @@ func startWorkers(app Application, wg *sync.WaitGroup) {
 	go func() {
 		newWorker := temporal.NewWorker(app.Temporal.GetClient(), "greeting", worker.Options{})
 
-		newWorker.RegisterWorkflow(app.layerSrv.ImportLayerWorkflow)
+		newWorker.RegisterWorkflow(app.importService.ImportLayerWorkflow)
 
 		if err := newWorker.Start(); err != nil {
 			log.Fatalf("error in running newWorker with err: %v", err)

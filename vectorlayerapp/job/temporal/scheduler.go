@@ -3,14 +3,14 @@ package temporalscheduler
 import (
 	"context"
 	"github.com/gocastsian/roham/adapter/temporal"
-	"github.com/gocastsian/roham/vectorlayerapp/service"
+	"github.com/gocastsian/roham/vectorlayerapp/service/importlayer"
 	"github.com/google/uuid"
 	"go.temporal.io/sdk/client"
 )
 
 type Scheduler struct {
 	temporal temporal.Adapter
-	service  service.Service
+	service  importlayer.Service
 }
 
 func New(temporal temporal.Adapter) Scheduler {

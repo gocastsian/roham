@@ -1,4 +1,4 @@
-package service
+package generatetile
 
 import "errors"
 
