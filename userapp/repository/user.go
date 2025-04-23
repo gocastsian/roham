@@ -5,9 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/gocastsian/roham/types"
-	"log/slog"
-
 	"github.com/gocastsian/roham/userapp/service/user"
+	"log/slog"
 )
 
 type Config struct {
@@ -133,6 +132,48 @@ func (repo UserRepo) checkUserExist(ctx context.Context, phoneNumber string) (bo
 	return true, nil
 }
 
+func (repo UserRepo) CheckUserUniquness(ctx context.Context, email string, username string) (bool, error) {
+	query := `SELECT 
+				EXISTS (SELECT 1 FROM users WHERE username = $1) AS username_exists,
+				EXISTS (SELECT 1 FROM users WHERE email = $2) AS email_exists`
+	stmt, err := repo.PostgreSQL.PrepareContext(ctx, query)
+	if err != nil {
+		return false, fmt.Errorf("failed to prepare statement: %w", err)
+	}
+	defer stmt.Close()
+	var username_exist, email_exist bool
+	err = stmt.QueryRowContext(ctx, username, email).Scan(&username_exist, &email_exist)
+	if err != nil {
+		return false, fmt.Errorf("failed to execute prepared statement: %w", err)
+	}
+	return username_exist || email_exist, nil
+}
+func (repo UserRepo) RegisterUser(ctx context.Context, user user.User) (types.ID, error) {
+	query := `INSERT INTO users 
+    			(username,first_name,last_name,email,role,password_hash) 
+				VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`
+	stmt, err := repo.PostgreSQL.PrepareContext(ctx, query)
+	if err != nil {
+		return 0, fmt.Errorf("failed to prepare statement: %w", err)
+	}
+	defer stmt.Close()
+
+	var id types.ID
+
+	err = stmt.QueryRowContext(ctx,
+		user.Username,     // $1
+		user.FirstName,    // $2
+		user.LastName,     // $3
+		user.Email,        // $4
+		user.Role,         // $5
+		user.PasswordHash, // $6
+	).Scan(&id)
+	if err != nil {
+		return 0, fmt.Errorf("failed to register user: %w", err)
+	}
+
+	return id, nil
+}
 func (repo UserRepo) GetUser(ctx context.Context, ID types.ID) (user.User, error) {
 	// Check if the user exists
 	exists, err := repo.checkUserExistByID(ctx, ID)
@@ -195,4 +236,5 @@ func (repo UserRepo) checkUserExistByID(ctx context.Context, ID types.ID) (bool,
 	}
 
 	return exists, nil
+
 }

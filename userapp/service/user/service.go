@@ -3,17 +3,20 @@ package user
 import (
 	"context"
 	"fmt"
-	"github.com/gocastsian/roham/types"
-	"log/slog"
 
 	errmsg "github.com/gocastsian/roham/pkg/err_msg"
 	"github.com/gocastsian/roham/pkg/password"
+	"github.com/gocastsian/roham/pkg/statuscode"
+	"github.com/gocastsian/roham/types"
 	"github.com/gocastsian/roham/userapp/service/guard"
+	"log/slog"
 )
 
 type Repository interface {
 	GetAllUsers(ctx context.Context) ([]User, error)
 	GetUserByPhoneNumber(ctx context.Context, phoneNumber string) (User, error)
+	RegisterUser(ctx context.Context, user User) (types.ID, error)
+	CheckUserUniquness(ctx context.Context, email string, username string) (bool, error)
 	GetUser(ctx context.Context, ID types.ID) (User, error)
 }
 
@@ -115,6 +118,60 @@ func (srv Service) Login(ctx context.Context, loginReq LoginRequest) (LoginRespo
 	}, nil
 }
 
+func (srv Service) RegisterUser(ctx context.Context, regReq RegisterRequest) (RegisterResponse, error) {
+	// validate user registration request fields
+	if err := srv.validator.ValidateRegistration(regReq); err != nil {
+		return RegisterResponse{}, err
+	}
+	// check uniqueness of username and email
+	if userExist, err := srv.repository.CheckUserUniquness(ctx, regReq.Email, regReq.Username); err != nil {
+		return RegisterResponse{}, errmsg.ErrorResponse{
+			Message: "Application can not detect user existence!",
+			Errors:  map[string]interface{}{"user_Register": err.Error()},
+		}
+	} else if userExist {
+		return RegisterResponse{}, errmsg.ErrorResponse{
+			Message:         "user already exist!",
+			Errors:          map[string]interface{}{},
+			InternalErrCode: statuscode.IntCodeValidation,
+		}
+	}
+
+	// prepare user entity for save in storage
+	hashedPassword, err := password.HashPassword(regReq.Password)
+	if err != nil {
+		return RegisterResponse{}, errmsg.ErrorResponse{
+			Message: err.Error(),
+			Errors:  map[string]interface{}{"user_Register": err.Error()},
+		}
+	}
+	var user = User{
+		ID:           0,
+		Username:     regReq.Username,
+		FirstName:    regReq.FirstName,
+		LastName:     regReq.LastName,
+		PhoneNumber:  "",
+		Email:        regReq.Email,
+		Avatar:       "",
+		BirthDate:    "",
+		IsActive:     true,
+		Role:         0,
+		PasswordHash: hashedPassword,
+	}
+
+	if newUserId, err := srv.repository.RegisterUser(ctx, user); err != nil {
+		return RegisterResponse{}, errmsg.ErrorResponse{
+			Message: "registration failed",
+			Errors:  map[string]interface{}{"user_Register": err.Error()},
+		}
+	} else {
+		user.ID = newUserId
+	}
+
+	return RegisterResponse{
+		ID: user.ID,
+	}, nil
+}
 func (srv Service) GetUser(ctx context.Context, userID types.ID) (GetAllUsersItem, error) {
 
 	user, err := srv.repository.GetUser(ctx, userID)
@@ -140,4 +197,5 @@ func (srv Service) GetUser(ctx context.Context, userID types.ID) (GetAllUsersIte
 		Role:        user.Role,
 	}
 	return responseUser, nil
+
 }
