@@ -4,17 +4,17 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/gocastsian/roham/types"
-	"log"
-	"net/http"
-	"strconv"
 
 	errmsg "github.com/gocastsian/roham/pkg/err_msg"
 	"github.com/gocastsian/roham/pkg/statuscode"
 	"github.com/gocastsian/roham/pkg/validator"
+	"github.com/gocastsian/roham/types"
 	"github.com/gocastsian/roham/userapp/service/guard"
 	"github.com/gocastsian/roham/userapp/service/user"
 	"github.com/labstack/echo/v4"
+	"log"
+	"net/http"
+	"strconv"
 )
 
 type Handler struct {
@@ -43,13 +43,13 @@ func (h Handler) GetAllUsers(c echo.Context) error {
 }
 
 func (h Handler) Login(c echo.Context) error {
-	var req user.LoginRequest
+	var request user.LoginRequest
 
-	if err := c.Bind(&req); err != nil {
+	if err := c.Bind(&request); err != nil {
 		return c.JSON(http.StatusBadRequest, errmsg.ErrorResponse{Message: errmsg.ErrInvalidRequestFormat.Error()})
 	}
 
-	resp, err := h.UserService.Login(c.Request().Context(), req)
+	resp, err := h.UserService.Login(c.Request().Context(), request)
 	if err != nil {
 		if vErr, ok := err.(validator.Error); ok {
 			return c.JSON(vErr.StatusCode(), vErr)
@@ -143,6 +143,28 @@ func preparePolicyInput(c echo.Context, userClaim guard.UserClaim) (map[string]i
 	}, nil
 }
 
+func (h Handler) RegisterUser(c echo.Context) error {
+	var request user.RegisterRequest
+
+	if err := c.Bind(&request); err != nil {
+		return c.JSON(http.StatusBadRequest, errmsg.ErrorResponse{Message: err.Error()})
+	}
+
+	response, err := h.UserService.RegisterUser(c.Request().Context(), request)
+	if err != nil {
+
+		return c.JSON(statuscode.MapToHTTPStatusCode(err.(errmsg.ErrorResponse)), map[string]interface{}{
+			"message": err.Error(),
+			"errors":  err.(errmsg.ErrorResponse).Errors,
+		})
+	}
+
+	return c.JSON(http.StatusCreated, map[string]interface{}{
+		"message":  "user registered successfully",
+		"response": response,
+	})
+}
+
 func (h Handler) GetUser(c echo.Context) error {
 	idStr := c.Param("id")
 	userID, err := strconv.Atoi(idStr)
@@ -161,6 +183,7 @@ func (h Handler) GetUser(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, res)
+
 }
 
 func (h Handler) UploadAvatar(c echo.Context) error {

@@ -43,5 +43,7 @@ func (s Server) RegisterRoutes() {
 	userGroup.GET("/", s.Handler.GetAllUsers)
 	userGroup.GET("/:id", s.Handler.GetUser)
 	userGroup.POST("/login", s.Handler.Login)
+	userGroup.POST("", s.Handler.RegisterUser)
+
 	userGroup.PATCH("/avatar", s.Handler.UploadAvatar)
 }
