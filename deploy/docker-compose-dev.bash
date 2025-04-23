@@ -5,4 +5,5 @@ docker compose \
 --project-directory . \
 -f ./deploy/roham/development/traefik-compose.yaml \
 -f ./deploy/user/development/docker-compose.yaml \
+-f ./deploy/filer/development/docker-compose.yaml \
  "$@"

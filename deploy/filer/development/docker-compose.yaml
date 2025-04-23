@@ -1,0 +1,44 @@
+services:
+  filer-service:
+    build:
+      context: .
+      dockerfile: ./deploy/filer/development/Dockerfile
+      args:
+        GO_IMAGE_NAME: ${GO_IMAGE_NAME}
+        GO_IMAGE_VERSION: ${GO_IMAGE_VERSION}
+    image: ${SERVICE_NAME}-filer:${GO_IMAGE_NAME}-${GO_IMAGE_VERSION}
+    env_file:
+      - ./deploy/.env
+    entrypoint:
+      - air
+      - "-c"
+      - /home/app/.air/.air.filer.toml
+    volumes:
+      - ./:/home/app
+    profiles:
+      - filer
+    ports:
+      - "5005:5005"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.${SERVICE_NAME}_filer.service=${SERVICE_NAME}_filer"
+      - "traefik.http.routers.${SERVICE_NAME}_filer.rule=Host(`${SERVICE_DOMAIN}`)&&PathPrefix(`/filer`)"
+      - "traefik.http.routers.${SERVICE_NAME}_filer.entrypoints=web"
+      - "traefik.http.services.${SERVICE_NAME}_filer.loadbalancer.server.port=5005"
+      - "traefik.http.routers.${SERVICE_NAME}_filer.middlewares=${SERVICE_NAME}_strip_filer"
+      - "traefik.http.middlewares.${SERVICE_NAME}_strip_filer.stripprefix.prefixes=/filer"
+  minio:
+    image: minio/minio:latest
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    volumes:
+      - minio-data:/data
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    profiles:
+      - filer
+volumes:
+  minio-data:
