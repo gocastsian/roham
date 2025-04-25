@@ -20,7 +20,7 @@ func New(temporal temporal.Adapter) Scheduler {
 func (w Scheduler) Add(ctx context.Context, workflowId string, workflowName string) (string, error) {
 	options := client.StartWorkflowOptions{
 		ID:        workflowId,
-		TaskQueue: GREETING_QUEUE_NAME,
+		TaskQueue: IMPORT_LAYER_QUEUE_NAME,
 	}
 
 	we, err := w.temporal.GetClient().ExecuteWorkflow(ctx, options, workflowName, workflowId)

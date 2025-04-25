@@ -1,5 +1,5 @@
 package temporalscheduler
 
 const (
-	GREETING_QUEUE_NAME = "greeting"
+	IMPORT_LAYER_QUEUE_NAME = "import-layer"
 )
