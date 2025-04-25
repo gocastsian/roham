@@ -25,6 +25,7 @@ type Application struct {
 	layerSrv   service.Service
 	Handler    http.Handler
 	Scheduler  temporalscheduler.Scheduler
+	Workflow   service.Workflow
 	HTTPServer http.Server
 	Temporal   temporal.Adapter
 	Config     Config
@@ -38,6 +39,7 @@ func Setup(ctx context.Context, config Config, postgresConn *postgresql.Database
 	LayerValidator := service.NewValidator(LayerRepo)
 	LayerSrv := service.NewService(LayerRepo, LayerValidator, scheduler)
 	Handler := http.NewHandler(LayerSrv, logger)
+	wf := service.New(LayerSrv)
 
 	return Application{
 		layerRepo:  LayerRepo,
@@ -46,6 +48,7 @@ func Setup(ctx context.Context, config Config, postgresConn *postgresql.Database
 		HTTPServer: http.New(httpserver.New(config.HTTPServer), Handler, logger),
 		Temporal:   temporalAdp,
 		Scheduler:  scheduler,
+		Workflow:   wf,
 		Config:     config,
 		Logger:     logger,
 	}
@@ -103,7 +106,10 @@ func startWorkers(app Application, wg *sync.WaitGroup) {
 	go func() {
 		newWorker := temporal.NewWorker(app.Temporal.GetClient(), "greeting", worker.Options{})
 
-		newWorker.RegisterWorkflow(app.layerSrv.ImportLayerWorkflow)
+		newWorker.RegisterWorkflow(app.Workflow.ImportLayerWorkflow)
+		newWorker.RegisterActivity(app.layerSrv.ImportLayer)
+		newWorker.RegisterActivity(app.layerSrv.UpdateJobStatus)
+		newWorker.RegisterActivity(app.layerSrv.SendNotification)
 
 		if err := newWorker.Start(); err != nil {
 			log.Fatalf("error in running newWorker with err: %v", err)

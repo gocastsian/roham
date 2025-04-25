@@ -29,3 +29,15 @@ func (h Handler) healthCheck(c echo.Context) error {
 		"message": check,
 	})
 }
+
+func (h Handler) ImportLayer(c echo.Context) error {
+	res, err := h.LayerService.ScheduleImportLayer(c.Request().Context())
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
+	}
+	return c.JSON(http.StatusOK, echo.Map{
+		"message":    "success",
+		"workflowId": res.WorkflowId,
+	})
+
+}
