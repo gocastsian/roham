@@ -111,6 +111,7 @@ func (s Service) ImportLayer(ctx context.Context) (ImportLayerResponse, error) {
 	}, nil
 }
 
+// TODO: implement real notification
 func (s Service) SendNotification(ctx context.Context, req SendNotificationRequest) error {
 
 	_, err := s.repository.GetJobByToken(ctx, req.WorkflowId)
