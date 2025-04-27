@@ -185,3 +185,19 @@ func (h Handler) GetUser(c echo.Context) error {
 	return c.JSON(http.StatusOK, res)
 
 }
+
+func (h Handler) GetCurrentUser(c echo.Context) error {
+	claims := h.guardService.GetClaimsFromEchoContext(c)
+
+	currentUser := user.GetAllUsersItem{ID: claims.UserClaim.ID}
+
+	res, err := h.UserService.GetUser(c.Request().Context(), currentUser.ID)
+	if err != nil {
+		if vErr, ok := err.(validator.Error); ok {
+			return c.JSON(vErr.StatusCode(), vErr)
+		}
+		return c.JSON(statuscode.MapToHTTPStatusCode(err.(errmsg.ErrorResponse)), err)
+	}
+
+	return c.JSON(http.StatusOK, res)
+}

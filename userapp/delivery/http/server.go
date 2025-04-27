@@ -42,6 +42,7 @@ func (s Server) RegisterRoutes() {
 	userGroup := v1.Group("/users")
 	userGroup.GET("/", s.Handler.GetAllUsers)
 	userGroup.GET("/:id", s.Handler.GetUser)
+	userGroup.GET("/me", s.Handler.GetCurrentUser)
 	userGroup.POST("/login", s.Handler.Login)
 	userGroup.POST("", s.Handler.RegisterUser)
 
