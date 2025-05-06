@@ -1,0 +1,36 @@
+total_shutdown_timeout:
+  15s
+
+http_server:
+  port: 5005
+  cors:
+    allow_origins: "*"
+  shutdown_context_timeout: "10s"
+
+logger:
+  file_path: "logs/filer/service.log"
+  use_local_time: true
+  file_max_size_in_mb: 10
+  file_max_age_in_days: 1
+
+minio_storage:
+  endpoint: "localhost:9000"
+  access_key: "minioadmin"
+  secret_key: "minioadmin"
+
+uploader:
+  temp_path: "./uploads"
+
+  logger:
+    file_path: "logs/filer/service.log"
+    use_local_time: true
+    file_max_size_in_mb: 10
+    file_max_age_in_days: 1
+
+  http_server:
+    port: 5006
+    cors:
+      allow_origins: "*"
+    shutdown_context_timeout: "10s"
+
+

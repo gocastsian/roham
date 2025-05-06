@@ -36,14 +36,9 @@ func (s Server) Stop(ctx context.Context) error {
 func (s Server) RegisterRoutes() {
 	v1 := s.HTTPServer.Router.Group("/v1")
 	v1.GET("/health-check", s.healthCheck)
-	v1.GET("/auth", s.Handler.authenticate)
-	v1.GET("/authz", s.Handler.authorize)
 
-	userGroup := v1.Group("/users")
-	userGroup.GET("/", s.Handler.GetAllUsers)
-	userGroup.GET("/:id", s.Handler.GetUser)
-	userGroup.GET("/me", s.Handler.GetCurrentUser)
-	userGroup.POST("/login", s.Handler.Login)
-	userGroup.POST("", s.Handler.RegisterUser)
+	filesGroup := v1.Group("/files")
 
+	filesGroup.GET("/:upload-i/download", s.Handler.DownloadFile)
+	filesGroup.GET("/:key/download-using-pre-signed-url", s.Handler.DownloadFileUsingPreSignedURL)
 }
