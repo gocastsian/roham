@@ -1,5 +1,5 @@
 total_shutdown_timeout:
-  3
+  15s
 
 http_server:
   port: 5002
@@ -16,10 +16,10 @@ cache_config:
   write_ttl: "10s"
 
 postgres_db:
-  host: "localhost"
+  host: vectorlayer-db
   port: 5432
-  user: "nimamleo"
-  password: "root"
+  user: "vectorlayer_admin"
+  password: "password123"
   db_name: vectorlayer_db
   ssl_mode: disable
   max_idle_conns: 15
