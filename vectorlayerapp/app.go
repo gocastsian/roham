@@ -104,7 +104,7 @@ func startServers(app Application, wg *sync.WaitGroup) {
 func startWorkers(app Application, wg *sync.WaitGroup) {
 	wg.Add(1)
 	go func() {
-		newWorker := temporal.NewWorker(app.Temporal.GetClient(), "greeting", worker.Options{})
+		newWorker := temporal.NewWorker(app.Temporal.GetClient(), "import_layer", worker.Options{})
 
 		newWorker.RegisterWorkflow(app.Workflow.ImportLayerWorkflow)
 		newWorker.RegisterActivity(app.layerSrv.ImportLayer)

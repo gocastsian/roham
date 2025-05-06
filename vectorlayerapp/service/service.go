@@ -18,7 +18,7 @@ type Repository interface {
 }
 
 type Scheduler interface {
-	Add(ctx context.Context, workflowId string, workflowName string) (string, error)
+	Add(ctx context.Context, workflowId string, workflowName string, queueName string) (string, error)
 }
 
 type Service struct {
@@ -54,7 +54,7 @@ func (s Service) ScheduleImportLayer(ctx context.Context) (ScheduleImportLayerRe
 		return ScheduleImportLayerResponse{}, fmt.Errorf("failed to create job record: %w", err)
 	}
 
-	_, err = s.Scheduler.Add(ctx, workflowId, "ImportLayerWorkflow")
+	_, err = s.Scheduler.Add(ctx, workflowId, "ImportLayerWorkflow", "import_layer")
 	if err != nil {
 		_, _ = s.repository.AddJob(ctx, JobEntity{
 			Token:  workflowId,
