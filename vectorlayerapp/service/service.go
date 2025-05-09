@@ -99,32 +99,27 @@ func (s Service) UpdateJobStatus(ctx context.Context, req UpdateJobStatusRequest
 func (s Service) ImportLayer(ctx context.Context, fileKey string) (ImportLayerResponse, error) {
 	localDir := "./shapefile"
 
-	// If directory exists, delete it and all its contents
 	if _, err := os.Stat(localDir); err == nil {
 		if err := os.RemoveAll(localDir); err != nil {
 			return ImportLayerResponse{}, fmt.Errorf("failed to remove existing dir %s: %w", localDir, err)
 		}
 	}
 
-	// Create a fresh directory
 	if err := os.MkdirAll(localDir, 0755); err != nil {
 		return ImportLayerResponse{}, fmt.Errorf("failed to create dir %s: %w", localDir, err)
 	}
 
-	// Download the zip file data
 	data, err := s.queryClient.DownloadShapeFile(fileKey)
 	if err != nil {
 		return ImportLayerResponse{}, fmt.Errorf("failed to download %s: %w", fileKey, err)
 	}
 
-	// Save the zip file locally
 	zipPath := filepath.Join(localDir, filepath.Base(fileKey)+".zip")
 	if err := os.WriteFile(zipPath, data, 0644); err != nil {
 		return ImportLayerResponse{}, fmt.Errorf("failed to write zip file %s: %w", zipPath, err)
 	}
 	log.Printf("Saved zip file %s", zipPath)
 
-	// Unzip the contents into localDir
 	if err := archiver.Unarchive(zipPath, localDir); err != nil {
 		return ImportLayerResponse{}, fmt.Errorf("failed to unzip file %s: %w", zipPath, err)
 	}
@@ -132,7 +127,6 @@ func (s Service) ImportLayer(ctx context.Context, fileKey string) (ImportLayerRe
 
 	connStr := "PG:host=localhost user=nimamleo dbname=vectorlayer_db password=root"
 
-	// Pass the shapefile path to ogr2ogr
 	cmd := exec.CommandContext(ctx, "ogr2ogr",
 		"-f", "PostgreSQL",
 		connStr,
