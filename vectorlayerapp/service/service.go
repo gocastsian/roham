@@ -4,9 +4,13 @@ import (
 	"context"
 	"fmt"
 	"github.com/gocastsian/roham/types"
+	"github.com/gocastsian/roham/vectorlayerapp/job"
 	"github.com/google/uuid"
+	"github.com/mholt/archiver/v3"
 	"log"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"time"
 )
 
@@ -18,20 +22,26 @@ type Repository interface {
 }
 
 type Scheduler interface {
-	Add(ctx context.Context, workflowId string, workflowName string, queueName string) (string, error)
+	Add(ctx context.Context, event job.Event) (string, error)
+}
+
+type QueryClient interface {
+	DownloadShapeFile(fileKey string) ([]byte, error)
 }
 
 type Service struct {
-	repository Repository
-	validator  Validator
-	Scheduler  Scheduler
+	repository  Repository
+	validator   Validator
+	scheduler   Scheduler
+	queryClient QueryClient
 }
 
-func NewService(repo Repository, validator Validator, scheduler Scheduler) Service {
+func NewService(repo Repository, validator Validator, scheduler Scheduler, queryClient QueryClient) Service {
 	return Service{
-		repository: repo,
-		validator:  validator,
-		Scheduler:  scheduler,
+		repository:  repo,
+		validator:   validator,
+		scheduler:   scheduler,
+		queryClient: queryClient,
 	}
 }
 
@@ -43,7 +53,7 @@ func (s Service) HealthCheckSrv(ctx context.Context) (string, error) {
 	return check, nil
 }
 
-func (s Service) ScheduleImportLayer(ctx context.Context) (ScheduleImportLayerResponse, error) {
+func (s Service) ScheduleImportLayer(ctx context.Context, fileKey string) (ScheduleImportLayerResponse, error) {
 	workflowId := "layer_" + uuid.New().String()
 
 	_, err := s.repository.AddJob(ctx, JobEntity{
@@ -54,7 +64,14 @@ func (s Service) ScheduleImportLayer(ctx context.Context) (ScheduleImportLayerRe
 		return ScheduleImportLayerResponse{}, fmt.Errorf("failed to create job record: %w", err)
 	}
 
-	_, err = s.Scheduler.Add(ctx, workflowId, "ImportLayerWorkflow", "import_layer")
+	_, err = s.scheduler.Add(ctx, job.Event{
+		WorkflowId:   workflowId,
+		WorkflowName: "ImportLayerWorkflow",
+		QueueName:    "import_layer",
+		Args: map[string]any{
+			"key": fileKey},
+	})
+
 	if err != nil {
 		_, _ = s.repository.AddJob(ctx, JobEntity{
 			Token:  workflowId,
@@ -79,15 +96,47 @@ func (s Service) UpdateJobStatus(ctx context.Context, req UpdateJobStatusRequest
 	return err
 }
 
-// TODO: make this better
-func (s Service) ImportLayer(ctx context.Context) (ImportLayerResponse, error) {
-	connStr := "PG:host=localhost user=nimamleo dbname=vectorlayer_db password=root"
-	shapefile := "/home/nimamleo/Downloads/Iran_shipefile/Ostan.shp"
+func (s Service) ImportLayer(ctx context.Context, fileKey string) (ImportLayerResponse, error) {
+	localDir := "./shapefile"
 
+	// If directory exists, delete it and all its contents
+	if _, err := os.Stat(localDir); err == nil {
+		if err := os.RemoveAll(localDir); err != nil {
+			return ImportLayerResponse{}, fmt.Errorf("failed to remove existing dir %s: %w", localDir, err)
+		}
+	}
+
+	// Create a fresh directory
+	if err := os.MkdirAll(localDir, 0755); err != nil {
+		return ImportLayerResponse{}, fmt.Errorf("failed to create dir %s: %w", localDir, err)
+	}
+
+	// Download the zip file data
+	data, err := s.queryClient.DownloadShapeFile(fileKey)
+	if err != nil {
+		return ImportLayerResponse{}, fmt.Errorf("failed to download %s: %w", fileKey, err)
+	}
+
+	// Save the zip file locally
+	zipPath := filepath.Join(localDir, filepath.Base(fileKey)+".zip")
+	if err := os.WriteFile(zipPath, data, 0644); err != nil {
+		return ImportLayerResponse{}, fmt.Errorf("failed to write zip file %s: %w", zipPath, err)
+	}
+	log.Printf("Saved zip file %s", zipPath)
+
+	// Unzip the contents into localDir
+	if err := archiver.Unarchive(zipPath, localDir); err != nil {
+		return ImportLayerResponse{}, fmt.Errorf("failed to unzip file %s: %w", zipPath, err)
+	}
+	log.Printf("Unzipped files to %s", localDir)
+
+	connStr := "PG:host=localhost user=nimamleo dbname=vectorlayer_db password=root"
+
+	// Pass the shapefile path to ogr2ogr
 	cmd := exec.CommandContext(ctx, "ogr2ogr",
 		"-f", "PostgreSQL",
 		connStr,
-		shapefile,
+		filepath.Join(localDir, "/ostan/Ostan.shp"),
 		"-nln", "ostan",
 		"-overwrite",
 		"-append",
@@ -102,8 +151,6 @@ func (s Service) ImportLayer(ctx context.Context) (ImportLayerResponse, error) {
 		log.Printf("ogr2ogr failed: %v\nOutput: %s", err, string(output))
 		return ImportLayerResponse{}, fmt.Errorf("ogr2ogr failed: %w", err)
 	}
-
-	time.Sleep(time.Second * 10) //simulate it takes time
 
 	log.Println("Shapefile imported successfully!")
 	return ImportLayerResponse{

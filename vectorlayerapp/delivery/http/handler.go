@@ -31,7 +31,14 @@ func (h Handler) healthCheck(c echo.Context) error {
 }
 
 func (h Handler) ImportLayer(c echo.Context) error {
-	res, err := h.LayerService.ScheduleImportLayer(c.Request().Context())
+	fileKey := c.QueryParam("fileKey")
+	if fileKey == "" {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"message": "file key is required",
+		})
+	}
+
+	res, err := h.LayerService.ScheduleImportLayer(c.Request().Context(), fileKey)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
 	}

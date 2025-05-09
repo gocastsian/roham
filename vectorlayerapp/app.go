@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/gocastsian/roham/adapter/temporal"
 	temporalscheduler "github.com/gocastsian/roham/vectorlayerapp/job/temporal"
+	"github.com/gocastsian/roham/vectorlayerapp/queryclient"
 	"github.com/gocastsian/roham/vectorlayerapp/service"
 	"go.temporal.io/sdk/worker"
 	"log"
@@ -37,7 +38,8 @@ func Setup(ctx context.Context, config Config, postgresConn *postgresql.Database
 	scheduler := temporalscheduler.New(temporalAdp)
 	LayerRepo := repository.NewLayerRepo(postgresConn.DB)
 	LayerValidator := service.NewValidator(LayerRepo)
-	LayerSrv := service.NewService(LayerRepo, LayerValidator, scheduler)
+	queryClient := queryclient.New()
+	LayerSrv := service.NewService(LayerRepo, LayerValidator, scheduler, queryClient)
 	Handler := http.NewHandler(LayerSrv, logger)
 	wf := service.New(LayerSrv)
 

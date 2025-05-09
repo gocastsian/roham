@@ -3,6 +3,7 @@ package temporalscheduler
 import (
 	"context"
 	"github.com/gocastsian/roham/adapter/temporal"
+	"github.com/gocastsian/roham/vectorlayerapp/job"
 	"go.temporal.io/sdk/client"
 	"log"
 )
@@ -17,13 +18,13 @@ func New(temporal temporal.Adapter) Scheduler {
 	}
 }
 
-func (w Scheduler) Add(ctx context.Context, workflowId string, workflowName string, queueName string) (string, error) {
+func (w Scheduler) Add(ctx context.Context, event job.Event) (string, error) {
 	options := client.StartWorkflowOptions{
-		ID:        workflowId,
-		TaskQueue: queueName,
+		ID:        event.WorkflowId,
+		TaskQueue: event.QueueName,
 	}
 
-	we, err := w.temporal.GetClient().ExecuteWorkflow(ctx, options, workflowName, workflowId)
+	we, err := w.temporal.GetClient().ExecuteWorkflow(ctx, options, event.WorkflowName, event)
 	if err != nil {
 		return "", err
 	}
