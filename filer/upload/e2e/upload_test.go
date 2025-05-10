@@ -21,7 +21,7 @@ func TestUpload(t *testing.T) {
 	baseURL, _ := url.Parse("http://localhost:5006/uploads/")
 	cl := tusdclient.New(baseURL)
 
-	f, err := os.Open("/home/nimamleo/Downloads/Iran_shipefile/ostan.zip")
+	f, err := os.Open("/home/nimamleo/Downloads/Iran_shipefile/shahr.zip")
 	if err != nil {
 		panic(err)
 	}

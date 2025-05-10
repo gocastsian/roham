@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -97,41 +98,60 @@ func (s Service) UpdateJobStatus(ctx context.Context, req UpdateJobStatusRequest
 }
 
 func (s Service) ImportLayer(ctx context.Context, fileKey string) (ImportLayerResponse, error) {
-	localDir := "./shapefile"
-
-	if _, err := os.Stat(localDir); err == nil {
-		if err := os.RemoveAll(localDir); err != nil {
-			return ImportLayerResponse{}, fmt.Errorf("failed to remove existing dir %s: %w", localDir, err)
-		}
+	tempDir, err := os.MkdirTemp("", "shapefile-*")
+	if err != nil {
+		return ImportLayerResponse{}, fmt.Errorf("failed to create temporary directory: %w", err)
 	}
+	defer os.RemoveAll(tempDir)
 
-	if err := os.MkdirAll(localDir, 0755); err != nil {
-		return ImportLayerResponse{}, fmt.Errorf("failed to create dir %s: %w", localDir, err)
-	}
+	log.Printf("Created temporary directory: %s", tempDir)
 
 	data, err := s.queryClient.DownloadShapeFile(fileKey)
 	if err != nil {
 		return ImportLayerResponse{}, fmt.Errorf("failed to download %s: %w", fileKey, err)
 	}
 
-	zipPath := filepath.Join(localDir, filepath.Base(fileKey)+".zip")
+	zipPath := filepath.Join(tempDir, filepath.Base(fileKey)+".zip")
 	if err := os.WriteFile(zipPath, data, 0644); err != nil {
 		return ImportLayerResponse{}, fmt.Errorf("failed to write zip file %s: %w", zipPath, err)
 	}
 	log.Printf("Saved zip file %s", zipPath)
 
-	if err := archiver.Unarchive(zipPath, localDir); err != nil {
+	if err := archiver.Unarchive(zipPath, tempDir); err != nil {
 		return ImportLayerResponse{}, fmt.Errorf("failed to unzip file %s: %w", zipPath, err)
 	}
-	log.Printf("Unzipped files to %s", localDir)
+	log.Printf("Unzipped files to %s", tempDir)
+
+	var shpFilePath string
+	err = filepath.Walk(tempDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() && strings.ToLower(filepath.Ext(path)) == ".shp" {
+			shpFilePath = path
+			return filepath.SkipAll
+		}
+		return nil
+	})
+	if err != nil {
+		return ImportLayerResponse{}, fmt.Errorf("failed to scan directory for .shp files: %w", err)
+	}
+
+	if shpFilePath == "" {
+		return ImportLayerResponse{}, fmt.Errorf("no .shp file found in the extracted directory")
+	}
+
+	log.Printf("Found shapefile: %s", shpFilePath)
+
+	layerName := strings.ToLower(filepath.Base(shpFilePath[:len(shpFilePath)-4]))
 
 	connStr := "PG:host=localhost user=nimamleo dbname=vectorlayer_db password=root"
 
 	cmd := exec.CommandContext(ctx, "ogr2ogr",
 		"-f", "PostgreSQL",
 		connStr,
-		filepath.Join(localDir, "/ostan/Ostan.shp"),
-		"-nln", "ostan",
+		shpFilePath,
+		"-nln", layerName,
 		"-overwrite",
 		"-append",
 		"-nlt", "MULTIPOLYGON",
@@ -145,6 +165,8 @@ func (s Service) ImportLayer(ctx context.Context, fileKey string) (ImportLayerRe
 		log.Printf("ogr2ogr failed: %v\nOutput: %s", err, string(output))
 		return ImportLayerResponse{}, fmt.Errorf("ogr2ogr failed: %w", err)
 	}
+
+	time.Sleep(10 * time.Second)
 
 	log.Println("Shapefile imported successfully!")
 	return ImportLayerResponse{
