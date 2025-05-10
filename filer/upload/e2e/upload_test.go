@@ -11,7 +11,7 @@ import (
 
 func TestUpload(t *testing.T) {
 
-	// Create a temporary test file
+	//Create a temporary test file
 	testFileContent := []byte("This is a test file")
 	filePath := "test.txt"
 	err := os.WriteFile(filePath, testFileContent, 0644)
@@ -21,7 +21,7 @@ func TestUpload(t *testing.T) {
 	baseURL, _ := url.Parse("http://localhost:5006/uploads/")
 	cl := tusdclient.New(baseURL)
 
-	f, err := os.Open("test.txt")
+	f, err := os.Open("/home/nimamleo/Downloads/Iran_shipefile/shahr.zip")
 	if err != nil {
 		panic(err)
 	}

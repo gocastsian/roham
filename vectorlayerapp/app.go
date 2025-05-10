@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/gocastsian/roham/adapter/temporal"
 	temporalscheduler "github.com/gocastsian/roham/vectorlayerapp/job/temporal"
+	"github.com/gocastsian/roham/vectorlayerapp/queryclient"
 	"github.com/gocastsian/roham/vectorlayerapp/service"
 	"go.temporal.io/sdk/worker"
 	"log"
@@ -25,6 +26,7 @@ type Application struct {
 	layerSrv   service.Service
 	Handler    http.Handler
 	Scheduler  temporalscheduler.Scheduler
+	Workflow   service.Workflow
 	HTTPServer http.Server
 	Temporal   temporal.Adapter
 	Config     Config
@@ -36,8 +38,10 @@ func Setup(ctx context.Context, config Config, postgresConn *postgresql.Database
 	scheduler := temporalscheduler.New(temporalAdp)
 	LayerRepo := repository.NewLayerRepo(postgresConn.DB)
 	LayerValidator := service.NewValidator(LayerRepo)
-	LayerSrv := service.NewService(LayerRepo, LayerValidator, scheduler)
+	queryClient := queryclient.New()
+	LayerSrv := service.NewService(LayerRepo, LayerValidator, scheduler, queryClient)
 	Handler := http.NewHandler(LayerSrv, logger)
+	wf := service.New(LayerSrv)
 
 	return Application{
 		layerRepo:  LayerRepo,
@@ -46,6 +50,7 @@ func Setup(ctx context.Context, config Config, postgresConn *postgresql.Database
 		HTTPServer: http.New(httpserver.New(config.HTTPServer), Handler, logger),
 		Temporal:   temporalAdp,
 		Scheduler:  scheduler,
+		Workflow:   wf,
 		Config:     config,
 		Logger:     logger,
 	}
@@ -101,9 +106,12 @@ func startServers(app Application, wg *sync.WaitGroup) {
 func startWorkers(app Application, wg *sync.WaitGroup) {
 	wg.Add(1)
 	go func() {
-		newWorker := temporal.NewWorker(app.Temporal.GetClient(), "greeting", worker.Options{})
+		newWorker := temporal.NewWorker(app.Temporal.GetClient(), "import_layer", worker.Options{})
 
-		newWorker.RegisterWorkflow(app.layerSrv.ImportLayerWorkflow)
+		newWorker.RegisterWorkflow(app.Workflow.ImportLayerWorkflow)
+		newWorker.RegisterActivity(app.layerSrv.ImportLayer)
+		newWorker.RegisterActivity(app.layerSrv.UpdateJobStatus)
+		newWorker.RegisterActivity(app.layerSrv.SendNotification)
 
 		if err := newWorker.Start(); err != nil {
 			log.Fatalf("error in running newWorker with err: %v", err)

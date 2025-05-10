@@ -3,14 +3,13 @@ package temporalscheduler
 import (
 	"context"
 	"github.com/gocastsian/roham/adapter/temporal"
-	"github.com/gocastsian/roham/vectorlayerapp/service"
-	"github.com/google/uuid"
+	"github.com/gocastsian/roham/vectorlayerapp/job"
 	"go.temporal.io/sdk/client"
+	"log"
 )
 
 type Scheduler struct {
 	temporal temporal.Adapter
-	service  service.Service
 }
 
 func New(temporal temporal.Adapter) Scheduler {
@@ -19,22 +18,17 @@ func New(temporal temporal.Adapter) Scheduler {
 	}
 }
 
-func (w Scheduler) ExecuteImportLayer(ctx context.Context, name string) (string, error) {
-	workflowId := "test" + uuid.New().String()
+func (w Scheduler) Add(ctx context.Context, event job.Event) (string, error) {
 	options := client.StartWorkflowOptions{
-		ID:        workflowId,
-		TaskQueue: GREETING_QUEUE_NAME,
+		ID:        event.WorkflowId,
+		TaskQueue: event.QueueName,
 	}
 
-	we, err := w.temporal.GetClient().ExecuteWorkflow(ctx, options, w.service.ImportLayerWorkflow, name)
+	we, err := w.temporal.GetClient().ExecuteWorkflow(ctx, options, event.WorkflowName, event)
 	if err != nil {
 		return "", err
 	}
 
-	var res string
-	if err := we.Get(ctx, &res); err != nil {
-		return "", err
-	}
-
-	return res, nil
+	log.Println("Started workflow", "WorkflowID", we.GetID(), "RunID", we.GetRunID())
+	return we.GetID(), nil
 }

@@ -36,4 +36,6 @@ func (s Server) RegisterRoutes() {
 	v1 := s.HTTPServer.Router.Group("/v1")
 	v1.GET("/health-check", s.Handler.healthCheck)
 
+	layerGroup := v1.Group("/layer")
+	layerGroup.GET("/import", s.Handler.ImportLayer)
 }

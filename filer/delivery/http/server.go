@@ -39,6 +39,6 @@ func (s Server) RegisterRoutes() {
 
 	filesGroup := v1.Group("/files")
 
-	filesGroup.GET("/:upload-i/download", s.Handler.DownloadFile)
+	filesGroup.GET("/:key/download", s.Handler.DownloadFile)
 	filesGroup.GET("/:key/download-using-pre-signed-url", s.Handler.DownloadFileUsingPreSignedURL)
 }
