@@ -1,8 +1,13 @@
 package user_test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"github.com/stretchr/testify/require"
+	"mime/multipart"
+	"net/http/httptest"
+	"path/filepath"
 	"testing"
 
 	"github.com/gocastsian/roham/types"
@@ -40,13 +45,23 @@ func (m *MockRepository) CheckUserExistByID(ctx context.Context, ID types.ID) (b
 	args := m.Called(ctx, ID)
 	return args.Bool(0), args.Error(1)
 }
-func (m *MockRepository) UpdateAvatar(ctx context.Context, ID types.ID, uploadAddress string) error {
-	return nil
-}
 
 func (m *MockRepository) RegisterUser(ctx context.Context, u user.User) (types.ID, error) {
 	args := m.Called(ctx, u)
 	return args.Get(0).(types.ID), args.Error(1)
+}
+func (m *MockRepository) UpdateAvatar(ctx context.Context, ID types.ID, uploadAddress string) error {
+	fmt.Printf("userId:%d destAddre:%s\n", ID, uploadAddress)
+	args := m.Called(ctx, ID, uploadAddress)
+	return args.Error(0)
+}
+
+type mockMultipartFile struct {
+	*bytes.Reader
+}
+
+func (m *mockMultipartFile) Close() error {
+	return nil
 }
 
 func TestRegisterUser_Success(t *testing.T) {
@@ -146,6 +161,126 @@ func TestGetUser(t *testing.T) {
 				assert.Contains(t, err.Error(), tc.err.Error())
 			} else {
 				assert.Equal(t, user.ID, user.ID)
+			}
+		})
+	}
+}
+
+func createTestMultipartFile(t *testing.T, fieldName, filename string, content []byte) (multipart.File, *multipart.FileHeader) {
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	part, err := writer.CreateFormFile(fieldName, filename)
+	require.NoError(t, err)
+
+	_, err = part.Write(content)
+	require.NoError(t, err)
+
+	err = writer.Close()
+	require.NoError(t, err)
+
+	req := httptest.NewRequest("POST", "/", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	err = req.ParseMultipartForm(32 << 20)
+	require.NoError(t, err)
+
+	file, fileHeader, err := req.FormFile(fieldName)
+	require.NoError(t, err)
+
+	return file, fileHeader
+}
+func TestUpdateUserAvatar(t *testing.T) {
+	mockRepo := new(MockRepository)
+	tmpDir := t.TempDir()
+	conf := user.Config{
+		AvatarConfig: user.AvatarConfig{
+			MaxSize:       1, // 1 MB
+			ValidFormats:  []string{"image/png"},
+			UploadFileDir: tmpDir,
+		},
+	}
+	service := user.NewService(
+		mockRepo,
+		user.NewValidator(mockRepo),
+		nil,
+		&guard.Service{},
+		conf,
+	)
+
+	type TestCase struct {
+		name           string
+		userId         types.ID
+		avatar         *user.Avatar
+		expectError    bool
+		expectRepoCall bool
+	}
+
+	pngContent := []byte("\x89PNG\r\n\x1a\n" + "some image content here")
+	file, fileHeader := createTestMultipartFile(t, "avatar", "avatar.png", pngContent)
+	validAvatar := user.Avatar{
+		FileHandler: fileHeader,
+		File:        file,
+	}
+
+	exeContent := []byte("MZP...not really an image")
+	badFile, badFileHeader := createTestMultipartFile(t, "avatar", "bad.exe", exeContent)
+	invalidAvatar := user.Avatar{
+		FileHandler: badFileHeader,
+		File:        badFile,
+	}
+	largeContent := bytes.Repeat([]byte("A"), 2*1024*1024) // 2 MB
+	largeFile, largeFileHeader := createTestMultipartFile(t, "avatar", "large.png", largeContent)
+	largeAvatar := user.Avatar{
+		FileHandler: largeFileHeader,
+		File:        largeFile,
+	}
+
+	testCases := []TestCase{
+		{
+			name:           "success upload avatar",
+			userId:         types.ID(1),
+			avatar:         &validAvatar,
+			expectError:    false,
+			expectRepoCall: true,
+		},
+		{
+			name:           "invalid file (wrong MIME)",
+			userId:         types.ID(1),
+			avatar:         &invalidAvatar,
+			expectError:    true,
+			expectRepoCall: false,
+		},
+		{
+			name:           "file too large",
+			userId:         types.ID(1),
+			avatar:         &largeAvatar,
+			expectError:    true,
+			expectRepoCall: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			dstPath := filepath.Join(tmpDir, tc.avatar.FileHandler.Filename)
+
+			if tc.expectRepoCall {
+				mockRepo.On("UpdateAvatar", mock.Anything, tc.userId, dstPath).Return(nil).Once()
+			}
+
+			err := service.UpdateUserAvatar(context.Background(), tc.userId, *tc.avatar)
+
+			if tc.expectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			fmt.Println("Recorded calls:", mockRepo.Calls)
+			if tc.expectRepoCall {
+				mockRepo.AssertCalled(t, "UpdateAvatar", mock.Anything, tc.userId, dstPath)
+				mockRepo.ExpectedCalls = nil
+				mockRepo.Calls = nil
+			} else {
+				mockRepo.AssertNotCalled(t, "UpdateAvatar", mock.Anything, tc.userId, mock.Anything)
 			}
 		})
 	}
