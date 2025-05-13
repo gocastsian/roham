@@ -20,6 +20,7 @@ type Repository interface {
 	AddJob(ctx context.Context, job JobEntity) (types.ID, error)
 	GetJobByToken(ctx context.Context, token string) (JobEntity, error)
 	UpdateJob(ctx context.Context, job JobEntity) (bool, error)
+	CreateLayer(ctx context.Context, layer LayerEntity) (types.ID, error)
 }
 
 type Scheduler interface {
@@ -146,7 +147,6 @@ func (s Service) ImportLayer(ctx context.Context, fileKey string) (ImportLayerRe
 	layerName := strings.ToLower(filepath.Base(shpFilePath[:len(shpFilePath)-4]))
 
 	connStr := "PG:host=localhost user=nimamleo dbname=vectorlayer_db password=root"
-
 	cmd := exec.CommandContext(ctx, "ogr2ogr",
 		"-f", "PostgreSQL",
 		connStr,
@@ -159,11 +159,19 @@ func (s Service) ImportLayer(ctx context.Context, fileKey string) (ImportLayerRe
 		"-lco", "GEOMETRY_NAME=wkb_geometry",
 		"-lco", "FID=ogc_fid",
 	)
-
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Printf("ogr2ogr failed: %v\nOutput: %s", err, string(output))
 		return ImportLayerResponse{}, fmt.Errorf("ogr2ogr failed: %w", err)
+	}
+
+	_, err = s.repository.CreateLayer(ctx, LayerEntity{
+		Name:         layerName,
+		DefaultStyle: "default",
+	})
+	if err != nil {
+		//TODO: use saga to revert created layer
+		return ImportLayerResponse{}, fmt.Errorf("failed to create layer %s: %w", layerName, err)
 	}
 
 	time.Sleep(10 * time.Second)

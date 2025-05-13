@@ -21,3 +21,12 @@ type JobEntity struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
+
+// TODO add new column system_cordiante
+type LayerEntity struct {
+	ID           types.ID  `json:"id"`
+	Name         string    `json:"name"`
+	DefaultStyle string    `json:"default_style"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}

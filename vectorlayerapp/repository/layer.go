@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/gocastsian/roham/types"
 	"github.com/gocastsian/roham/vectorlayerapp/service"
 )
 
@@ -29,4 +30,16 @@ func (r LayerRepo) HealthCheck(ctx context.Context) (string, error) {
 	defer stmt.Close()
 
 	return "everything is ok", nil
+}
+
+func (r LayerRepo) CreateLayer(ctx context.Context, layer service.LayerEntity) (types.ID, error) {
+	query := `insert into layers(name , default_style) values($1 , $2) returning id;`
+
+	var id types.ID
+	err := r.PostgreSQL.QueryRowContext(ctx, query, layer.Name, layer.DefaultStyle).Scan(&id)
+	if err != nil {
+		return 0, fmt.Errorf("failed to create layer: %w", err)
+	}
+
+	return id, nil
 }
