@@ -16,8 +16,8 @@ cache_config:
   write_ttl: "10s"
 
 postgres_db:
-  host: localhost
-  port: 5433
+  host: user-db
+  port: 5432
   user: "user_admin"
   password: "password123"
   db_name: user_db
