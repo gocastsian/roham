@@ -3,6 +3,7 @@ package http_test
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/gocastsian/roham/types"
@@ -12,6 +13,8 @@ import (
 	"github.com/gocastsian/roham/userapp/service/user"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -160,6 +163,83 @@ func TestIntegrationHandler_RegisterUser(t *testing.T) {
 				}
 
 			}
+		})
+	}
+
+}
+func createTestMultipartFile(t *testing.T, fieldName, filename string, content []byte) (*bytes.Buffer, string, error) {
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, err := writer.CreateFormFile(fieldName, filename)
+	require.NoError(t, err)
+	_, err = part.Write(content)
+	require.NoError(t, err)
+	err = writer.Close()
+	require.NoError(t, err)
+	return body, writer.FormDataContentType(), nil // RETURN Content-Type with boundary!
+}
+func TestIntegrationHandler_UploadUserAvatar(t *testing.T) {
+	type testCase struct {
+		name           string
+		requestBody    *bytes.Buffer
+		expectedStatus int
+		expectedBody   string
+	}
+	tmpDir := t.TempDir()
+	pngContent := []byte("\x89PNG\r\n\x1a\n" + "some image content here")
+	validBody, contentType, err := createTestMultipartFile(t, "avatar", "avatar.png", pngContent)
+
+	require.NoError(t, err)
+
+	testCases := []testCase{
+		{
+			name:           "successfully upload user avatar",
+			requestBody:    validBody,
+			expectedStatus: http.StatusOK,
+			expectedBody:   ``,
+		},
+	}
+	userRepo := userMock.NewUserRepoMock()
+	userValidator := user.NewValidator(userRepo)
+	userConf := user.Config{
+		AvatarConfig: user.AvatarConfig{
+			MaxSize:       1, // 1 MB
+			ValidFormats:  []string{"image/png"},
+			UploadFileDir: tmpDir,
+		},
+	}
+	userSrv := user.NewService(userRepo, userValidator, nil, nil, userConf)
+	guardSrv := guard.Service{}
+	userHandler := httpHandler.NewHandler(userSrv, guardSrv)
+	e := echo.New()
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+
+			req := httptest.NewRequest(http.MethodPatch, "/v1/users/avatar", tc.requestBody)
+			req.Header.Set(echo.HeaderContentType, contentType)
+			userInfo := guard.UserClaim{
+				ID:   1,
+				Role: 1,
+			}
+
+			jsonData, err := json.Marshal(userInfo)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			base64Encoded := base64.StdEncoding.EncodeToString(jsonData)
+			req.Header.Set("X-User-Info", base64Encoded)
+			rec := httptest.NewRecorder()
+
+			ctx := e.NewContext(req, rec)
+			err = userHandler.UploadAvatar(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			assert.Equal(t, tc.expectedStatus, rec.Code)
+
 		})
 	}
 
