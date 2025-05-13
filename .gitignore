@@ -18,3 +18,5 @@ logs/layer/service.log
 #remove additional data
 cli/input.json
 cli/config.json
+
+filer/upload/temp
