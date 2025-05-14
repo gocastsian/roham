@@ -74,3 +74,14 @@ func (m *UserRepoMock) GetUser(ctx context.Context, ID types.ID) (user.User, err
 	}
 	return user.User{}, nil
 }
+
+func (m *UserRepoMock) UpdateAvatar(ctx context.Context, ID types.ID, uploadAddress string) error {
+	for ind, u := range m.users {
+		if u.ID == ID {
+			m.users[ind].Avatar = uploadAddress
+			return nil
+		}
+	}
+	return fmt.Errorf("user not found")
+
+}

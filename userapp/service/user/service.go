@@ -4,6 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"mime/multipart"
+	"os"
+	"path/filepath"
+
 	errmsg "github.com/gocastsian/roham/pkg/err_msg"
 	"github.com/gocastsian/roham/pkg/password"
 	"github.com/gocastsian/roham/pkg/statuscode"
@@ -18,17 +22,32 @@ type Repository interface {
 	RegisterUser(ctx context.Context, user User) (types.ID, error)
 	CheckUserUniquness(ctx context.Context, email string, username string) (bool, error)
 	GetUser(ctx context.Context, ID types.ID) (User, error)
+	UpdateAvatar(ctx context.Context, ID types.ID, uploadAddress string) error
+}
+type Avatar struct {
+	FileHandler *multipart.FileHeader
+	File        multipart.File
 }
 
 type Service struct {
+	config     Config
 	repository Repository
 	validator  Validator
 	logger     *slog.Logger
 	guard      *guard.Service
 }
+type AvatarConfig struct {
+	MaxSize       int64    `koanf:"maximum_file_size"`
+	ValidFormats  []string `koanf:"valid_image_formats"`
+	UploadFileDir string   `koanf:"upload_file_dir"`
+}
+type Config struct {
+	AvatarConfig AvatarConfig `koanf:"avatar"`
+}
 
-func NewService(repo Repository, validator Validator, logger *slog.Logger, guard *guard.Service) Service {
+func NewService(repo Repository, validator Validator, logger *slog.Logger, guard *guard.Service, cfg Config) Service {
 	return Service{
+		config:     cfg,
 		repository: repo,
 		validator:  validator,
 		logger:     logger,
@@ -192,4 +211,54 @@ func (srv Service) GetUser(ctx context.Context, userID types.ID) (GetUserItem, e
 	}
 	return responseUser, nil
 
+}
+
+func (srv Service) UpdateUserAvatar(ctx context.Context, userID types.ID, avatar Avatar) error {
+	if err := srv.validator.ValidateAvatar(avatar, srv.config.AvatarConfig.MaxSize, srv.config.AvatarConfig.ValidFormats); err != nil {
+		return errmsg.ErrorResponse{
+			Message: err.Error(),
+			Errors:  map[string]interface{}{"user_UpdateAvatar": err.Error()},
+		}
+	}
+	dstAddress := filepath.Join(srv.config.AvatarConfig.UploadFileDir, avatar.FileHandler.Filename)
+	dst, err := srv.createFile(dstAddress)
+	if err != nil {
+		return errmsg.ErrorResponse{
+			Message: err.Error(),
+			Errors:  map[string]interface{}{"user_UpdateAvatar": err.Error()},
+		}
+	}
+	defer dst.Close()
+	if _, err := dst.ReadFrom(avatar.File); err != nil {
+		return errmsg.ErrorResponse{
+			Message: err.Error(),
+			Errors:  map[string]interface{}{"user_UpdateAvatar": err.Error()},
+		}
+	}
+	if err := srv.repository.UpdateAvatar(ctx, userID, dstAddress); err != nil {
+		return errmsg.ErrorResponse{
+			Message: err.Error(),
+			Errors:  map[string]interface{}{"user_UpdateAvatar": err.Error()},
+		}
+	}
+	return nil
+
+}
+
+func (srv Service) createFile(dstAddress string) (*os.File, error) {
+	// Create an uploads directory if it doesn’t exist
+	if _, err := os.Stat(srv.config.AvatarConfig.UploadFileDir); os.IsNotExist(err) {
+		err := os.MkdirAll(srv.config.AvatarConfig.UploadFileDir, 0755)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Build the file path and create it
+	dst, err := os.Create(dstAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	return dst, nil
 }

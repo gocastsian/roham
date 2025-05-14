@@ -2,8 +2,11 @@ package user
 
 import (
 	"errors"
+	"fmt"
 	"github.com/go-ozzo/ozzo-validation/v4/is"
 	"github.com/gocastsian/roham/pkg/statuscode"
+	"mime/multipart"
+	"net/http"
 	"regexp"
 	"unicode"
 
@@ -27,6 +30,7 @@ var (
 	ErrPasswordEmpty                = "password can not be empty"
 	ErrPasswordFormat               = "password should contain upper case letter, lower case letter and number"
 	ErrUnvalidDate                  = "unvalid date"
+	ErrAvatarSize                   = "avatar file size should be less than "
 )
 
 type ValidatorUserRepository interface {
@@ -180,4 +184,53 @@ func (v Validator) ValidateRegistration(registerReq RegisterRequest) error {
 func (v Validator) ValidateBirthDate(birthDate string) error {
 	err := validation.Date("2006-01-02").Error(ErrUnvalidDate).Validate(birthDate)
 	return err
+}
+
+func (v Validator) ValidateAvatar(avatar Avatar, size int64, formats []string) error {
+	return validation.Validate(
+		avatar.FileHandler,
+		validation.By(fileMimeTypeCheck(formats)),
+		validation.By(fileSizeLimit(size*1024*1024)), // size MB
+	)
+
+}
+func fileSizeLimit(maxBytes int64) validation.RuleFunc {
+	return func(value interface{}) error {
+		file, ok := value.(*multipart.FileHeader)
+		if !ok || file == nil {
+			return fmt.Errorf("invalid file size")
+		}
+		if file.Size > maxBytes {
+			return fmt.Errorf(ErrAvatarSize, maxBytes)
+		}
+		return nil
+	}
+}
+func fileMimeTypeCheck(allowedFormats []string) validation.RuleFunc {
+	return func(value interface{}) error {
+		fileHeader, ok := value.(*multipart.FileHeader)
+		if !ok || fileHeader == nil {
+			return fmt.Errorf("invalid file type")
+		}
+		file, err := fileHeader.Open()
+		if err != nil {
+			return fmt.Errorf("could not open file: %w", err)
+		}
+		defer file.Close()
+
+		// Read the first 512 bytes for content sniffing (as per net/http.DetectContentType)
+		buf := make([]byte, 512)
+		n, err := file.Read(buf)
+		if err != nil && err.Error() != "EOF" {
+			return fmt.Errorf("could not read file: %w", err)
+		}
+
+		mimeType := http.DetectContentType(buf[:n])
+		for _, allowedType := range allowedFormats {
+			if mimeType == allowedType {
+				return nil
+			}
+		}
+		return fmt.Errorf("invalid mime type: %s; allowed: %v", mimeType, allowedFormats)
+	}
 }

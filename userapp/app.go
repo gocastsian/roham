@@ -37,7 +37,7 @@ func Setup(config Config, postgresConn *postgresql.Database, logger *slog.Logger
 	}
 
 	guardSrv := guard.NewService(config.Guard, logger, opaEvaluator)
-	userSrv := user.NewService(userRepo, userValidator, logger, &guardSrv)
+	userSrv := user.NewService(userRepo, userValidator, logger, &guardSrv, config.User)
 	userHandler := http.NewHandler(userSrv, guardSrv)
 
 	return Application{
