@@ -29,3 +29,22 @@ func (h Handler) healthCheck(c echo.Context) error {
 		"message": check,
 	})
 }
+
+func (h Handler) ImportLayer(c echo.Context) error {
+	fileKey := c.QueryParam("fileKey")
+	if fileKey == "" {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"message": "file key is required",
+		})
+	}
+
+	res, err := h.LayerService.ScheduleImportLayer(c.Request().Context(), fileKey)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
+	}
+	return c.JSON(http.StatusOK, echo.Map{
+		"message":    "success",
+		"workflowId": res.WorkflowId,
+	})
+
+}
