@@ -94,10 +94,10 @@ func serveFiler() {
 	defer postgresql.Close(postgresConn.DB)
 
 	fileRepo := repository.NewFileMetadataRepo(appLogger, postgresConn.DB)
-	bucketRepo := repository.NewBucketRepo(appLogger, postgresConn.DB)
+	storageRepo := repository.NewStorageRepo(appLogger, postgresConn.DB)
 
 	// storageService is used for downloading files
-	storageService := storage.NewStorageService(s3Adapter, fileRepo, bucketRepo)
+	storageService := storage.NewStorageService(s3Adapter, fileRepo, storageRepo)
 	handler := http.NewHandler(storageService)
 	httpServer := http.New(httpserver.New(cfg.HTTPServer), handler, appLogger)
 

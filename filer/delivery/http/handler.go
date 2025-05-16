@@ -53,9 +53,17 @@ func (h Handler) DownloadFileUsingPreSignedURL(c echo.Context) error {
 	return c.Redirect(http.StatusTemporaryRedirect, url)
 }
 
-func (h Handler) CreateBucket(c echo.Context) error {
+func (h Handler) CreateStorage(c echo.Context) error {
 
-	_, err := h.storageService.CreateBucket(c.Request().Context(), "default-bucket")
+	var input storage.CreateStorageInput
+
+	if err := c.Bind(&input); err != nil {
+		return c.JSON(http.StatusBadRequest, errmsg.ErrorResponse{Message: err.Error()})
+	}
+	_, err := h.storageService.CreateStorage(c.Request().Context(), storage.CreateStorageInput{
+		Name: input.Name,
+		Kind: input.Kind,
+	})
 	if err != nil {
 		return err
 	}
