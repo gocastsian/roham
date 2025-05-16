@@ -1,7 +1,7 @@
 package http
 
 import (
-	"github.com/gocastsian/roham/filer/service/file"
+	"github.com/gocastsian/roham/filer/service/storage"
 	"net/http"
 	"time"
 
@@ -12,19 +12,19 @@ import (
 )
 
 type Handler struct {
-	FileService file.Service
+	storageService storage.Service
 }
 
-func NewHandler(fileSrv file.Service) Handler {
+func NewHandler(srv storage.Service) Handler {
 	return Handler{
-		FileService: fileSrv,
+		storageService: srv,
 	}
 }
 
 func (h Handler) DownloadFile(c echo.Context) error {
 
 	key := c.Param("key")
-	body, err := h.FileService.GetFile(c.Request().Context(), key)
+	body, err := h.storageService.GetFile(c.Request().Context(), key)
 	if err != nil {
 		if vErr, ok := err.(validator.Error); ok {
 			return c.JSON(vErr.StatusCode(), vErr)
@@ -42,7 +42,7 @@ func (h Handler) DownloadFile(c echo.Context) error {
 
 func (h Handler) DownloadFileUsingPreSignedURL(c echo.Context) error {
 	//todo get pre-signed duration using config
-	url, err := h.FileService.GeneratePreSignedURL(c.Request().Context(), c.Param("key"), 30*time.Minute)
+	url, err := h.storageService.GeneratePreSignedURL(c.Request().Context(), c.Param("key"), 30*time.Minute)
 	if err != nil {
 		if vErr, ok := err.(validator.Error); ok {
 			return c.JSON(vErr.StatusCode(), vErr)
@@ -51,6 +51,15 @@ func (h Handler) DownloadFileUsingPreSignedURL(c echo.Context) error {
 	}
 
 	return c.Redirect(http.StatusTemporaryRedirect, url)
+}
+
+func (h Handler) CreateBucket(c echo.Context) error {
+
+	_, err := h.storageService.CreateBucket(c.Request().Context(), "default-bucket")
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s Server) healthCheck(c echo.Context) error {

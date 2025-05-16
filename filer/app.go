@@ -3,11 +3,10 @@ package filer
 import (
 	"context"
 	"fmt"
-	"github.com/gocastsian/roham/filer/adapter/s3adapter"
 	"github.com/gocastsian/roham/filer/delivery/http"
-	"github.com/gocastsian/roham/filer/service/file"
-	httpserver "github.com/gocastsian/roham/pkg/http_server"
-
+	"github.com/gocastsian/roham/filer/delivery/tus"
+	"github.com/gocastsian/roham/filer/service/storage"
+	"github.com/gocastsian/roham/pkg/postgresql"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -16,28 +15,24 @@ import (
 )
 
 type Application struct {
-	ShutdownCtx context.Context
-	Config      *Config
-	Logger      *slog.Logger
-	s3Adapter   *s3adapter.Adapter
-	httpHandler http.Handler
-	HTTPServer  http.Server
+	ShutdownCtx  context.Context
+	Config       *Config
+	Logger       *slog.Logger
+	storageSvc   storage.Service
+	httpHandler  http.Handler
+	HTTPServer   http.Server
+	UploadServer tus.Server
+	postgresConn *postgresql.Database
 }
 
-func Setup(ctx context.Context, cfg *Config, logger *slog.Logger, s3Adapter *s3adapter.Adapter) Application {
-
-	filerService := file.NewFileService(s3Adapter)
-	handler := http.NewHandler(filerService)
-
-	httpServer := http.New(httpserver.New(cfg.HTTPServer), handler, logger)
-
+func Setup(ctx context.Context, cfg *Config, logger *slog.Logger, httpServer http.Server, uploadServer tus.Server, storageSvc storage.Service) Application {
 	return Application{
-		ShutdownCtx: ctx,
-		Config:      cfg,
-		Logger:      logger,
-		s3Adapter:   s3Adapter,
-		httpHandler: handler,
-		HTTPServer:  httpServer,
+		ShutdownCtx:  ctx,
+		Config:       cfg,
+		Logger:       logger,
+		storageSvc:   storageSvc,
+		HTTPServer:   httpServer,
+		UploadServer: uploadServer,
 	}
 }
 
@@ -49,15 +44,69 @@ func (app Application) Start() {
 	defer stop()
 
 	// start http server for download of files
+	//wg.Add(1)
+	//go func() {
+	//	defer wg.Done()
+	//	app.Logger.Info(fmt.Sprintf("HTTP server started on %d", app.Config.HTTPServer.Port))
+	//	if err := app.HTTPServer.Serve(); err != nil {
+	//		app.Logger.Error(fmt.Sprintf("error in HTTP server on %d", app.Config.HTTPServer.Port), err)
+	//	}
+	//	app.Logger.Info(fmt.Sprintf("HTTP server stopped %d", app.Config.HTTPServer.Port))
+	//}()
+
+	// start http server for download of files
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		app.Logger.Info(fmt.Sprintf("HTTP server started on %d", app.Config.HTTPServer.Port))
-		if err := app.HTTPServer.Serve(); err != nil {
-			app.Logger.Error(fmt.Sprintf("error in HTTP server on %d", app.Config.HTTPServer.Port), err)
+		app.Logger.Info(fmt.Sprintf("Upload server started on %d", app.Config.Uploader.HTTPServer.Port))
+		if err := app.UploadServer.Serve(); err != nil {
+			app.Logger.Error(fmt.Sprintf("error in HTTP server on %d", app.Config.Uploader.HTTPServer.Port), err)
 		}
-		app.Logger.Info(fmt.Sprintf("HTTP server stopped %d", app.Config.HTTPServer.Port))
+		app.Logger.Info(fmt.Sprintf("HTTP server stopped %d", app.Config.Uploader.HTTPServer.Port))
 	}()
+
+	// handle events after uploads
+	wg.Add(1)
+	go func() {
+		for {
+			select {
+			case info := <-app.UploadServer.EventHandler().CreatedUploads:
+				// todo we use some metrics after CreatedUploads
+				fmt.Printf("Upload created: %+v\n", info)
+			case info := <-app.UploadServer.EventHandler().CompleteUploads:
+				err := app.UploadServer.Handler.UploadService.OnCompletedUploads(ctx, info.Upload.ID, "default-bucket", info.Upload.MetaData)
+				if err != nil {
+					app.Logger.Error("Unable to handle OnCompletedUploads: %s", err.Error())
+				}
+			}
+		}
+	}()
+
+	//go func() {
+	//
+	//	for event := range app.UploadServer.Handler.TusdHandler.CompleteUploads {
+	//
+	//		//ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	//		//bucketName := ""
+	//		//if bucket, ok := event.Upload.MetaData["bucket"]; ok {
+	//		bucketName := "default-bucket"
+	//		//} else {
+	//		//
+	//		//	app.Logger.Error("No bucket specified in upload metadata")
+	//		//	cancel()
+	//		//	continue
+	//		//}
+	//
+	//		go func(ctx context.Context, uploadID string, bucketName string, metaData map[string]string) {
+	//			//defer cancel()
+	//
+	//			err := app.UploadServer.Handler.UploadService.OnCompletedUploads(ctx, uploadID, bucketName, metaData)
+	//			if err != nil {
+	//				app.Logger.Error("Unable to handle OnCompletedUploads: %s", err.Error())
+	//			}
+	//		}(ctx, event.Upload.ID, bucketName, event.Upload.MetaData)
+	//	}
+	//}()
 
 	<-ctx.Done()
 	app.Logger.Info("Shutdown signal received...")
@@ -102,4 +151,5 @@ func (app Application) shutdownHTTPServer(wg *sync.WaitGroup) {
 	if err := app.HTTPServer.Stop(httpShutdownCtx); err != nil {
 		app.Logger.Error(fmt.Sprintf("HTTP server graceful shutdown failed: %v", err))
 	}
+	//todo shutdown upload server
 }

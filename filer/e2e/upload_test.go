@@ -9,9 +9,10 @@ import (
 	"testing"
 )
 
+// notice :  curl -i -X OPTIONS http://localhost:5006/uploads/ should return tusd headers. otherwise we encounter "unsupported feature: creation" error
+
 func TestUpload(t *testing.T) {
 
-	// Create a temporary test file
 	testFileContent := []byte("This is a test file")
 	filePath := "test.txt"
 	err := os.WriteFile(filePath, testFileContent, 0644)

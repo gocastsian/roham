@@ -13,6 +13,18 @@ logger:
   file_max_size_in_mb: 10
   file_max_age_in_days: 1
 
+postgres_db:
+  host: localhost
+  port: 5433
+  user: "roham"
+  password: "secret"
+  db_name: filer_db
+  ssl_mode: disable
+  max_idle_conns: 15
+  max_open_conns: 100
+  conn_max_lifetime: 5
+  path_of_migration: './filer/repository/migrations'
+
 minio_storage:
   endpoint: "localhost:9000"
   access_key: "minioadmin"
@@ -20,17 +32,12 @@ minio_storage:
 
 uploader:
   temp_path: "./uploads"
-
-  logger:
-    file_path: "logs/filer/service.log"
-    use_local_time: true
-    file_max_size_in_mb: 10
-    file_max_age_in_days: 1
-
   http_server:
     port: 5006
     cors:
+      skip: true
       allow_origins: "*"
+      allow_headers: "*"
     shutdown_context_timeout: "10s"
 
 
