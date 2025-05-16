@@ -14,6 +14,14 @@ type Adapter struct {
 	s3 *s3.S3
 }
 
+func NewSession(cfg *aws.Config) (*session.Session, error) {
+	sess, err := session.NewSession(cfg)
+	if err != nil {
+		return nil, err
+	}
+	return sess, nil
+}
+
 func New(cfg *aws.Config) (*Adapter, error) {
 
 	sess, err := session.NewSession(cfg)
@@ -59,4 +67,17 @@ func (a *Adapter) GeneratePreSignedURL(bucketName, key string, duration time.Dur
 	}
 
 	return urlStr, nil
+}
+
+func (a *Adapter) CreateBucket(ctx context.Context, bucketName string) error {
+	input := &s3.CreateBucketInput{
+		Bucket: aws.String(bucketName),
+	}
+
+	_, err := a.s3.CreateBucketWithContext(ctx, input)
+	if err != nil {
+		return fmt.Errorf("failed to create bucket %s: %w", bucketName, err)
+	}
+
+	return nil
 }
