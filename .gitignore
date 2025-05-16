@@ -19,4 +19,4 @@ logs/layer/service.log
 cli/input.json
 cli/config.json
 
-filer/upload/temp
+uploads
