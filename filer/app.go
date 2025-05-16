@@ -74,10 +74,21 @@ func (app Application) Start() {
 				// todo we use some metrics after CreatedUploads
 				fmt.Printf("Upload created: %+v\n", info)
 			case info := <-app.UploadServer.EventHandler().CompleteUploads:
-				err := app.UploadServer.Handler.UploadService.OnCompletedUploads(ctx, info.Upload.ID, "default-bucket", info.Upload.MetaData)
-				if err != nil {
-					app.Logger.Error("Unable to handle OnCompletedUploads: %s", err.Error())
+
+				input := storage.CreateFileMetadataInput{
+					StorageID: 1,
+					FileKey:   info.Upload.ID,
+					FileName:  info.Upload.MetaData["filename"],
+					MimeType:  info.Upload.MetaData["filetype"],
+					Size:      info.Upload.Size,
 				}
+				go func(ctx context.Context, input storage.CreateFileMetadataInput) {
+					err := app.UploadServer.Handler.UploadService.OnCompletedUploads(ctx, input)
+					if err != nil {
+						app.Logger.Error("Unable to handle OnCompletedUploads: %s", err.Error())
+
+					}
+				}(ctx, input)
 			}
 		}
 	}()
