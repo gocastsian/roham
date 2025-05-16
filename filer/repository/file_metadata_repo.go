@@ -23,10 +23,20 @@ func NewFileMetadataRepo(logger *slog.Logger, db *sql.DB) FileMetadataRepo {
 	}
 }
 
-func (r FileMetadataRepo) Create(ctx context.Context, f storage.FileMetadata) (types.ID, error) {
+func (r FileMetadataRepo) Insert(ctx context.Context, i storage.CreateFileMetadataInput) (types.ID, error) {
 
-	query := `INSERT INTO filer_metadata (storage_key, bucket_name, metadata, created_at, updated_at) VALUES ($1, $2, $3, $4) RETURNING id`
-
+	query := `
+		INSERT INTO file_metadata (
+			storage_id,
+			file_key,
+			file_name,
+			mime_type,
+			file_size
+		) VALUES (
+			$1, $2, $3, $4, $5
+		)
+		RETURNING id
+	`
 	stmt, err := r.db.PrepareContext(ctx, query)
 	if err != nil {
 		return 0, fmt.Errorf("failed to prepare statement: %w", err)
@@ -34,9 +44,15 @@ func (r FileMetadataRepo) Create(ctx context.Context, f storage.FileMetadata) (t
 	defer stmt.Close()
 
 	var id types.ID
-	err = stmt.QueryRowContext(ctx, f.Key, f.BucketName, f.Metadata, f.CreatedAt, f.UpdatedAt).Scan(&id)
+	err = stmt.QueryRowContext(ctx,
+		i.StorageID,
+		i.FileKey,
+		i.FileName,
+		i.MimeType,
+		i.Size,
+	).Scan(&id)
 	if err != nil {
-		return 0, fmt.Errorf("failed to insert file record: %w", err)
+		return 0, fmt.Errorf("failed to insert file metadata : %w", err)
 	}
 
 	return id, nil
