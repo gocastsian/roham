@@ -2,16 +2,16 @@ package upload
 
 import (
 	"context"
+	"fmt"
 	"github.com/gocastsian/roham/filer/service/storage"
 	"github.com/gocastsian/roham/types"
 	"log/slog"
 	"strconv"
-	"time"
 )
 
 type Service struct {
 	logger           *slog.Logger
-	fileMetadataRepo FileMetadataRepository
+	fileMetadataRepo FileMetadataRepo
 	fileMover        fileMover
 }
 
@@ -19,34 +19,26 @@ type fileMover interface {
 	moveTo(fileKey, to string) error
 }
 
-func NewUploadService(l *slog.Logger, fileMetadataRepo FileMetadataRepository) Service {
+func NewUploadService(l *slog.Logger, fileMetadataRepo FileMetadataRepo) Service {
 	return Service{
 		logger:           l,
 		fileMetadataRepo: fileMetadataRepo,
 	}
 }
 
-type FileMetadataRepository interface {
-	Create(ctx context.Context, fileMetadata storage.FileMetadata) (types.ID, error)
+type FileMetadataRepo interface {
+	Insert(ctx context.Context, fileMetadata storage.CreateFileMetadataInput) (types.ID, error)
 }
 
-func (s *Service) OnCompletedUploads(ctx context.Context, uploadID, bucketName string, metaData map[string]string) error {
+func (s *Service) OnCompletedUploads(ctx context.Context, input storage.CreateFileMetadataInput) error {
 
-	s.logger.Info("Upload completed :" + uploadID)
+	s.logger.Info("Upload completed. FileName : " + input.FileName)
 
-	f := storage.FileMetadata{
-		Key:        uploadID,
-		BucketName: bucketName,
-		Metadata:   metaData,
-		CreatedAt:  time.Time{},
-		UpdatedAt:  time.Time{},
-	}
-	_, err := s.fileMetadataRepo.Create(ctx, f)
+	fmt.Println(input)
+	_, err := s.fileMetadataRepo.Insert(ctx, input)
 	if err != nil {
 		return err
 	}
-
-	//todo move file to its original bucket.
 
 	return nil
 }

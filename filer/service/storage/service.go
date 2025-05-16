@@ -8,24 +8,24 @@ import (
 )
 
 type Service struct {
-	provider   Provider
-	bucketRepo BucketRepo
-	fileRepo   FileMetadataRepo
+	provider    Provider
+	storageRepo StorageRepo
+	fileRepo    FileMetadataRepo
 }
 
-type BucketRepo interface {
-	CreateBucket(ctx context.Context, name string) (types.ID, error)
+type StorageRepo interface {
+	Insert(ctx context.Context, s CreateStorageInput) (types.ID, error)
 }
 
 type FileMetadataRepo interface {
-	Create(ctx context.Context, fileMetadata FileMetadata) (types.ID, error)
+	Insert(ctx context.Context, fileMetadata CreateFileMetadataInput) (types.ID, error)
 }
 
-func NewStorageService(p Provider, fr FileMetadataRepo, br BucketRepo) Service {
+func NewStorageService(p Provider, fr FileMetadataRepo, br StorageRepo) Service {
 	return Service{
-		provider:   p,
-		fileRepo:   fr,
-		bucketRepo: br,
+		provider:    p,
+		fileRepo:    fr,
+		storageRepo: br,
 	}
 }
 
@@ -42,19 +42,21 @@ func (s Service) GeneratePreSignedURL(ctx context.Context, key string, t time.Du
 	return s.provider.GeneratePreSignedURL(bucketName, key, t)
 }
 
-func (s Service) CreateBucket(ctx context.Context, name string) (*Bucket, error) {
+func (s Service) CreateStorage(ctx context.Context, input CreateStorageInput) (*CreateStorageOutput, error) {
 
-	err := s.provider.CreateBucket(ctx, name)
-	if err != nil {
-		return nil, err
-	}
-	bucketID, err := s.bucketRepo.CreateBucket(ctx, name)
+	err := s.provider.MakeStorage(ctx, input.Name)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Bucket{
-		ID:   bucketID,
-		Name: name,
+	id, err := s.storageRepo.Insert(ctx, input)
+	if err != nil {
+		return nil, err
+	}
+
+	return &CreateStorageOutput{
+		ID:   id,
+		Name: input.Name,
+		Kind: input.Kind,
 	}, nil
 }

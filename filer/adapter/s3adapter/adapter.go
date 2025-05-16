@@ -69,14 +69,14 @@ func (a *Adapter) GeneratePreSignedURL(bucketName, key string, duration time.Dur
 	return urlStr, nil
 }
 
-func (a *Adapter) CreateBucket(ctx context.Context, bucketName string) error {
+func (a *Adapter) MakeStorage(ctx context.Context, name string) error {
 	input := &s3.CreateBucketInput{
-		Bucket: aws.String(bucketName),
+		Bucket: aws.String(name),
 	}
 
 	_, err := a.s3.CreateBucketWithContext(ctx, input)
 	if err != nil {
-		return fmt.Errorf("failed to create bucket %s: %w", bucketName, err)
+		return fmt.Errorf("failed to create bucket %s: %w", name, err)
 	}
 
 	return nil
