@@ -17,6 +17,8 @@ type Config struct {
 
 type Cors struct {
 	AllowOrigins []string `koanf:"allow_origins"`
+	AllowHeaders []string `koanf:"allow_headers"`
+	Skip         bool     `koanf:"skip"`
 }
 
 type Server struct {
@@ -29,7 +31,11 @@ func New(cfg Config) Server {
 
 	e.Use(middleware.Logger())
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		Skipper: func(c echo.Context) bool {
+			return cfg.Cors.Skip
+		},
 		AllowOrigins: cfg.Cors.AllowOrigins,
+		AllowHeaders: []string{"*"},
 	}))
 
 	return Server{

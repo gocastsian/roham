@@ -9,5 +9,5 @@ var RootCmd = &cobra.Command{
 }
 
 func init() {
-	RootCmd.AddCommand(serveFilerCmd, serveUploadAppCmd)
+	RootCmd.AddCommand(serveFilerCmd)
 }

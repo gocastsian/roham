@@ -22,6 +22,7 @@ require (
 	github.com/spf13/cobra v1.9.1
 	github.com/stretchr/testify v1.10.0
 	github.com/tus/tusd v1.13.0
+	github.com/tus/tusd/v2 v2.8.0
 	go.temporal.io/sdk v1.33.1
 	google.golang.org/grpc v1.71.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
@@ -75,8 +76,8 @@ require (
 	go.opentelemetry.io/otel/sdk v1.34.0 // indirect
 	go.opentelemetry.io/otel/trace v1.34.0 // indirect
 	go.temporal.io/api v1.44.1 // indirect
+	golang.org/x/exp v0.0.0-20250106191152-7588d65b2ba8 // indirect
 	golang.org/x/sync v0.12.0 // indirect
-	golang.org/x/tools v0.29.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250303144028-a0af3efb3deb // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TUS Upload Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/tus-js-client@2.3.0/dist/tus.min.js"></script>
+</head>
+<body>
+<h1>TUS Upload Test</h1>
+
+<input type="file" id="file-input">
+<button onclick="uploadFile()">Upload File</button>
+
+<div id="progress" style="margin-top: 20px;"></div>
+<div id="status" style="margin-top: 10px;"></div>
+
+<script>
+    function uploadFile() {
+        const fileInput = document.getElementById('file-input');
+        const file = fileInput.files[0];
+
+        if (!file) {
+            alert('Please select a file first');
+            return;
+        }
+
+        const upload = new tus.Upload(file, {
+            endpoint: 'http://localhost:5006/uploads/',
+            headers: {
+                "Bucket": "avatar"
+            },
+            retryDelays: [0, 1000, 3000, 5000],
+            metadata: {
+                filename: file.name,
+                filetype: file.type
+            },
+            onError: function(error) {
+                console.error("Upload failed:", error);
+                document.getElementById('status').innerHTML =
+                    `<span style="color: red;">Upload failed: ${error}</span>`;
+            },
+            onProgress: function(bytesUploaded, bytesTotal) {
+                const percentage = (bytesUploaded / bytesTotal * 100).toFixed(2);
+                document.getElementById('progress').innerHTML =
+                    `Progress: ${percentage}% (${bytesUploaded} of ${bytesTotal} bytes)`;
+            },
+            onSuccess: function() {
+                console.log("Upload finished:", upload.url);
+                document.getElementById('status').innerHTML =
+                    `<span style="color: green;">Upload finished! URL: ${upload.url}</span>`;
+            }
+        });
+
+        document.getElementById('status').innerHTML = "Starting upload...";
+        upload.start();
+    }
+</script>
+</body>
+</html>
