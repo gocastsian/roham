@@ -25,19 +25,22 @@ postgres_db:
   conn_max_lifetime: 5
   path_of_migration: './filer/repository/migrations'
 
-minio_storage:
+storage:
+  type: "filesystem"
+  temp_storage: "temp-storage"
+  base_path: "./uploads"
+  region: ""
   endpoint: "localhost:9000"
   access_key: "minioadmin"
   secret_key: "minioadmin"
 
 uploader:
-  temp_path: "./uploads"
-  http_server:
-    port: 5006
-    cors:
-      skip: true
-      allow_origins: "*"
-      allow_headers: "*"
-    shutdown_context_timeout: "10s"
+    server:
+      port: 5006
+      cors:
+        skip: true
+        allow_origins: "*"
+        allow_headers: "*"
+      shutdown_context_timeout: "10s"
 
 

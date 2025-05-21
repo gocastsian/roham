@@ -3,15 +3,13 @@ package command
 import (
 	"context"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/gocastsian/roham/filer/adapter/s3adapter"
 	"github.com/gocastsian/roham/filer/adapter/tusdadapter"
 	"github.com/gocastsian/roham/filer/delivery/http"
 	"github.com/gocastsian/roham/filer/delivery/tus"
 	"github.com/gocastsian/roham/filer/repository"
 	"github.com/gocastsian/roham/filer/service/storage"
 	"github.com/gocastsian/roham/filer/service/upload"
+	"github.com/gocastsian/roham/filer/storageprovider/storagefactory"
 	cfgloader "github.com/gocastsian/roham/pkg/cfg_loader"
 	httpserver "github.com/gocastsian/roham/pkg/http_server"
 	"github.com/gocastsian/roham/pkg/logger"
@@ -67,22 +65,6 @@ func serveFiler() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	awsConfig := aws.NewConfig().
-		WithRegion("ir").
-		WithEndpoint(cfg.MinioStorage.Endpoint).
-		WithCredentials(credentials.NewStaticCredentials(
-			cfg.MinioStorage.AccessKey,
-			cfg.MinioStorage.SecretKey,
-			"", // Leave empty unless using STS/OpenID
-		)).
-		WithS3ForcePathStyle(true).
-		WithDisableSSL(true)
-
-	s3Adapter, err := s3adapter.New(awsConfig)
-	if err != nil {
-		log.Fatalf("Failed to create AWS session: %s", err)
-	}
-
 	postgresConn, err := postgresql.Connect(cfg.PostgresDB)
 	if err != nil {
 		log.Fatalf("Failed to connect PostgresDB: %s", err)
@@ -96,19 +78,20 @@ func serveFiler() {
 	fileRepo := repository.NewFileMetadataRepo(appLogger, postgresConn.DB)
 	storageRepo := repository.NewStorageRepo(appLogger, postgresConn.DB)
 
-	// storageService is used for downloading files
-	storageService := storage.NewStorageService(s3Adapter, fileRepo, storageRepo)
+	storageProvider, err := storagefactory.New(cfg.Storage)
+	if err != nil {
+		log.Fatalf("Failed to create storage provider: %s", err)
+	}
+
+	storageService := storage.NewStorageService(storageProvider, fileRepo, storageRepo)
 	handler := http.NewHandler(storageService)
 	httpServer := http.New(httpserver.New(cfg.HTTPServer), handler, appLogger)
 
-	// uploadService will be handling uploading files
+	// Setup UploadServer
 	uploadService := upload.NewUploadService(appLogger, fileRepo)
-
-	// todo uploaded files will be moved after upload to default-bucket. should we define different handler per bucket?!
-	//tusHandler, err := tusdadapter.NewHandlerWithS3Store("default-bucket", &uploadService, s3Adapter)
-	tusHandler, err := tusdadapter.NewHandlerWithFileStore("default-bucket", &uploadService)
+	tusHandler, err := tusdadapter.New(storageProvider, &uploadService)
 	if err != nil {
-		log.Fatalf("Failed to create tus handler: %s", err)
+		log.Fatalf("Failed to create tus handler for storage type %s: %v", cfg.Storage.Type, err)
 	}
 
 	uploadHandler := tus.NewHandler(uploadService, tusHandler)

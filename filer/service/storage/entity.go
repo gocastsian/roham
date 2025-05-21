@@ -1,9 +1,7 @@
 package storage
 
 import (
-	"context"
 	"github.com/gocastsian/roham/types"
-	"io"
 	"time"
 )
 
@@ -11,12 +9,6 @@ type Storage struct {
 	ID   types.ID `json:"id"`
 	Name string   `json:"name"`
 	Kind string   `json:"kind"`
-}
-
-type Provider interface {
-	GetFileContent(ctx context.Context, storageName, fileKey string) (io.ReadCloser, error)
-	GeneratePreSignedURL(storageName, fileKey string, duration time.Duration) (string, error)
-	MakeStorage(ctx context.Context, name string) error
 }
 
 type FileMetadata struct {

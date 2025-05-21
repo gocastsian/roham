@@ -2,44 +2,40 @@ package storage
 
 import (
 	"context"
+	"github.com/gocastsian/roham/filer/storageprovider"
 	"github.com/gocastsian/roham/types"
 	"io"
 	"time"
 )
 
 type Service struct {
-	provider    Provider
-	storageRepo StorageRepo
+	provider    storageprovider.Provider
+	storageRepo Repository
 	fileRepo    FileMetadataRepo
 }
 
-type StorageRepo interface {
+type Repository interface {
 	Insert(ctx context.Context, s CreateStorageInput) (types.ID, error)
 }
 
 type FileMetadataRepo interface {
-	Insert(ctx context.Context, fileMetadata CreateFileMetadataInput) (types.ID, error)
+	InsertFileMetadata(ctx context.Context, fileMetadata FileMetadata) (types.ID, error)
 }
 
-func NewStorageService(p Provider, fr FileMetadataRepo, br StorageRepo) Service {
+func NewStorageService(p storageprovider.Provider, fr FileMetadataRepo, r Repository) Service {
 	return Service{
 		provider:    p,
 		fileRepo:    fr,
-		storageRepo: br,
+		storageRepo: r,
 	}
 }
 
-func (s Service) GetFile(ctx context.Context, key string) (io.ReadCloser, error) {
-	// todo get bucket name using FileRepo
-	// todo send metadata of file in addition to content
-	bucketName := "default-bucket"
-	return s.provider.GetFileContent(ctx, bucketName, key)
+func (s Service) GetFile(ctx context.Context, storageName, fileKey string) (io.ReadCloser, error) {
+	return s.provider.GetFile(ctx, storageName, fileKey)
 }
 
-func (s Service) GeneratePreSignedURL(ctx context.Context, key string, t time.Duration) (string, error) {
-	// todo get bucket name using FileRepo
-	bucketName := "default-bucket"
-	return s.provider.GeneratePreSignedURL(bucketName, key, t)
+func (s Service) GeneratePreSignedURL(ctx context.Context, storageName, fileKey string, t time.Duration) (string, error) {
+	return s.provider.GeneratePreSignedURL(storageName, fileKey, t)
 }
 
 func (s Service) CreateStorage(ctx context.Context, input CreateStorageInput) (*CreateStorageOutput, error) {
