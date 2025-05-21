@@ -24,7 +24,9 @@ func NewHandler(srv storage.Service) Handler {
 func (h Handler) DownloadFile(c echo.Context) error {
 
 	key := c.Param("key")
-	body, err := h.storageService.GetFile(c.Request().Context(), key)
+	storageName := "temp-storage"
+
+	body, err := h.storageService.GetFile(c.Request().Context(), storageName, key)
 	if err != nil {
 		if vErr, ok := err.(validator.Error); ok {
 			return c.JSON(vErr.StatusCode(), vErr)
@@ -42,7 +44,9 @@ func (h Handler) DownloadFile(c echo.Context) error {
 
 func (h Handler) DownloadFileUsingPreSignedURL(c echo.Context) error {
 	//todo get pre-signed duration using config
-	url, err := h.storageService.GeneratePreSignedURL(c.Request().Context(), c.Param("key"), 30*time.Minute)
+
+	storageName := "temp-storage"
+	url, err := h.storageService.GeneratePreSignedURL(c.Request().Context(), storageName, c.Param("key"), 30*time.Minute)
 	if err != nil {
 		if vErr, ok := err.(validator.Error); ok {
 			return c.JSON(vErr.StatusCode(), vErr)

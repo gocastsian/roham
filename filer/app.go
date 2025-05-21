@@ -6,6 +6,8 @@ import (
 	"github.com/gocastsian/roham/filer/delivery/http"
 	"github.com/gocastsian/roham/filer/delivery/tus"
 	"github.com/gocastsian/roham/filer/service/storage"
+	"github.com/gocastsian/roham/types"
+
 	"github.com/gocastsian/roham/pkg/postgresql"
 	"log/slog"
 	"os"
@@ -93,31 +95,31 @@ func (app Application) Start() {
 		}
 	}()
 
-	//go func() {
-	//
-	//	for event := range app.UploadServer.Handler.TusdHandler.CompleteUploads {
-	//
-	//		//ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	//		//bucketName := ""
-	//		//if bucket, ok := event.Upload.MetaData["bucket"]; ok {
-	//		bucketName := "default-bucket"
-	//		//} else {
-	//		//
-	//		//	app.Logger.Error("No bucket specified in upload metadata")
-	//		//	cancel()
-	//		//	continue
-	//		//}
-	//
-	//		go func(ctx context.Context, uploadID string, bucketName string, metaData map[string]string) {
-	//			//defer cancel()
-	//
-	//			err := app.UploadServer.Handler.UploadService.OnCompletedUploads(ctx, uploadID, bucketName, metaData)
-	//			if err != nil {
-	//				app.Logger.Error("Unable to handle OnCompletedUploads: %s", err.Error())
-	//			}
-	//		}(ctx, event.Upload.ID, bucketName, event.Upload.MetaData)
-	//	}
-	//}()
+	go func() {
+		for event := range app.UploadServer.Handler.TusHandler.CompleteUploads {
+			var bucketName string
+			if bucket, ok := event.Upload.MetaData["X-TARGET-STORAGE"]; ok {
+				bucketName = bucket
+			} else {
+				app.Logger.Error("No TARGET-STORAGE specified in header")
+				continue
+			}
+
+			go func(ctx context.Context, uploadID string, targetStorageName string, metaData map[string]string) {
+
+				input := storage.CreateFileMetadataInput{
+					TargetStorageName: targetStorageName,
+					FileKey:           uploadID,
+					FileName:          metaData["filename"],
+					MimeType:          metaData["filetype"],
+				}
+				err := app.UploadServer.Handler.UploadService.OnCompletedUploads(ctx, input)
+				if err != nil {
+					app.Logger.Error("Unable to handle OnCompletedUploads: %s", err.Error())
+				}
+			}(ctx, event.Upload.ID, bucketName, event.Upload.MetaData)
+		}
+	}()
 
 	<-ctx.Done()
 	app.Logger.Info("Shutdown signal received...")

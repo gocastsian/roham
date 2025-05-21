@@ -2,7 +2,10 @@ package tusdadapter
 
 import (
 	"errors"
-	"github.com/gocastsian/roham/filer/adapter/s3adapter"
+	"fmt"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/gocastsian/roham/filer/storageprovider"
+	"github.com/gocastsian/roham/filer/storageprovider/s3storage"
 	"github.com/tus/tusd/pkg/filestore"
 	tusd "github.com/tus/tusd/pkg/handler"
 	"github.com/tus/tusd/pkg/s3store"
@@ -16,31 +19,10 @@ type UploadValidator interface {
 	ValidateUpload(targetBucket string, size int64) error
 }
 
-func New() *tusd.Handler {
-	// Set up tusd file store
-	store := filestore.FileStore{
-		Path: "./uploads/",
-	}
-
-	// Create tusd handler config
-	composer := tusd.NewStoreComposer()
-	store.UseIn(composer)
-
-	h, err := tusd.NewHandler(tusd.Config{
-		BasePath:                "/files/",
-		StoreComposer:           composer,
-		RespectForwardedHeaders: true,
-	})
-	if err != nil {
-		log.Fatalf("Failed to create tusd handler: %v", err)
-	}
-	return h
-}
-
-func NewHandlerWithS3Store(bucketName string, v UploadValidator, adapter *s3adapter.Adapter) (*tusd.Handler, error) {
+func NewHandlerWithS3Store(storageName string, s3 *s3.S3, v UploadValidator) (*tusd.Handler, error) {
 
 	tusd.NewStoreComposer()
-	store := s3store.New(bucketName, adapter.S3())
+	store := s3store.New(storageName, s3)
 
 	composer := tusd.NewStoreComposer()
 	store.UseIn(composer)
@@ -48,13 +30,13 @@ func NewHandlerWithS3Store(bucketName string, v UploadValidator, adapter *s3adap
 	handler, err := tusd.NewHandler(tusd.Config{
 		BasePath:      "/uploads/",
 		StoreComposer: composer,
-		//PreUploadCreateCallback: func(hook tusd.HookEvent) error {
-		//	targetBucket := hook.HTTPRequest.Header.Get("Bucket")
-		//	if targetBucket == "" {
-		//		return errors.New("bucket name is required")
-		//	}
-		//	return v.ValidateUpload(targetBucket, hook.Upload.Size)
-		//},
+		PreUploadCreateCallback: func(hook tusd.HookEvent) error {
+			targetBucket := hook.HTTPRequest.Header.Get("Bucket")
+			if targetBucket == "" {
+				return errors.New("bucket name is required")
+			}
+			return v.ValidateUpload(targetBucket, hook.Upload.Size)
+		},
 		NotifyCompleteUploads:   true,
 		NotifyTerminatedUploads: true,
 		NotifyUploadProgress:    true,
@@ -68,9 +50,10 @@ func NewHandlerWithS3Store(bucketName string, v UploadValidator, adapter *s3adap
 	return handler, err
 }
 
-func NewHandlerWithFileStore(bucketName string, v UploadValidator) (*tusd.Handler, error) {
+func NewHandlerWithFileStore(storageName, basePath string, v UploadValidator) (*tusd.Handler, error) {
 
-	store := filestore.New("./uploads/" + bucketName)
+	uploadsDir := fmt.Sprintf("%s/%s", basePath, storageName)
+	store := filestore.New(uploadsDir)
 
 	composer := tusd.NewStoreComposer()
 	store.UseIn(composer)
@@ -101,8 +84,8 @@ func NewHandlerWithFileStore(bucketName string, v UploadValidator) (*tusd.Handle
 	})
 
 	// Create uploads dir if not exist
-	if _, err := os.Stat("./uploads/" + bucketName); os.IsNotExist(err) {
-		if err := os.Mkdir("./uploads/"+bucketName, os.ModePerm); err != nil {
+	if _, err := os.Stat(uploadsDir); os.IsNotExist(err) {
+		if err := os.Mkdir(uploadsDir, os.ModePerm); err != nil {
 			log.Fatalf("Could not create upload dir: %v", err)
 		}
 	}
@@ -112,4 +95,20 @@ func NewHandlerWithFileStore(bucketName string, v UploadValidator) (*tusd.Handle
 	}
 
 	return handler, err
+}
+
+func New(p storageprovider.Provider, v UploadValidator) (*tusd.Handler, error) {
+
+	switch p.Config().Type {
+	case "filesystem":
+		return NewHandlerWithFileStore(p.Config().TempStorage, p.Config().BasePath, v)
+	case "s3":
+		store, ok := p.(*s3storage.Storage)
+		if !ok {
+			return nil, errors.New("not a s3 storage")
+		}
+		return NewHandlerWithS3Store(p.Config().TempStorage, store.S3(), v)
+	}
+
+	return nil, errors.New("unknown storage type")
 }
