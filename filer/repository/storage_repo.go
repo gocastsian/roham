@@ -43,5 +43,15 @@ func (r StorageRepo) Insert(ctx context.Context, i storage.CreateStorageInput) (
 }
 
 func (r StorageRepo) StorageIsExist() {
+	//todo StorageIsExist
+}
 
+func (r StorageRepo) FindByName(ctx context.Context, name string) (storage.Storage, error) {
+
+	//todo Get from db
+	return storage.Storage{
+		ID: 1,
+		Kind: "avatar",
+		Name: name,
+	}, nil
 }
