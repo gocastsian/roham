@@ -3,11 +3,11 @@ package storage
 import "github.com/gocastsian/roham/types"
 
 type CreateFileMetadataInput struct {
-	StorageID types.ID `json:"storage_id"`
-	FileKey   string   `json:"file_key"`
-	FileName  string   `json:"file_name"`
-	MimeType  string   `json:"mime_type"`
-	Size      int64    `json:"file_size"`
+	TargetStorageName string `json:"target_storage_name"`
+	FileKey           string `json:"file_key"`
+	FileName          string `json:"file_name"`
+	MimeType          string `json:"mime_type"`
+	Size              int64  `json:"file_size"`
 }
 
 type CreateFileMetadataOutput struct {

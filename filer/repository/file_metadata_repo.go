@@ -23,7 +23,7 @@ func NewFileMetadataRepo(logger *slog.Logger, db *sql.DB) FileMetadataRepo {
 	}
 }
 
-func (r FileMetadataRepo) Insert(ctx context.Context, i storage.CreateFileMetadataInput) (types.ID, error) {
+func (r FileMetadataRepo) InsertFileMetadata(ctx context.Context, fileMetadata storage.FileMetadata) (types.ID, error) {
 
 	query := `
 		INSERT INTO file_metadata (
@@ -45,11 +45,11 @@ func (r FileMetadataRepo) Insert(ctx context.Context, i storage.CreateFileMetada
 
 	var id types.ID
 	err = stmt.QueryRowContext(ctx,
-		i.StorageID,
-		i.FileKey,
-		i.FileName,
-		i.MimeType,
-		i.Size,
+		fileMetadata.StorageID,
+		fileMetadata.FileKey,
+		fileMetadata.FileName,
+		fileMetadata.MimeType,
+		fileMetadata.Size,
 	).Scan(&id)
 	if err != nil {
 		return 0, fmt.Errorf("failed to insert file metadata : %w", err)
