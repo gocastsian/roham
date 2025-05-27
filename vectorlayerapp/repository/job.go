@@ -58,13 +58,13 @@ func (r LayerRepo) GetJobByToken(ctx context.Context, token string) (service.Job
 }
 
 func (r LayerRepo) UpdateJob(ctx context.Context, job service.JobEntity) (bool, error) {
-	query := `UPDATE jobs SET status = $1 WHERE token = $2;`
+	query := `UPDATE jobs SET status = $1 , error = $2 WHERE token = $3;`
 	stmt, err := r.PostgreSQL.PrepareContext(ctx, query)
 	if err != nil {
 		return false, err
 	}
 	defer stmt.Close()
-	_, err = stmt.ExecContext(ctx, job.Status, job.Token)
+	_, err = stmt.ExecContext(ctx, job.Status, job.Error, job.Token)
 	if err != nil {
 		return true, err
 	}

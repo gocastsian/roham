@@ -17,6 +17,14 @@ func New(service Service) Workflow {
 }
 
 func (w Workflow) ImportLayerWorkflow(ctx workflow.Context, event job.Event) error {
+	fileKey, ok := event.Args["key"].(string)
+	if !ok {
+		_ = workflow.ExecuteActivity(ctx, w.service.UpdateJob, UpdateJobStatusRequest{
+			WorkflowId: event.WorkflowId,
+			Status:     JobStatusFailed,
+		}).Get(ctx, nil)
+	}
+
 	ao := workflow.ActivityOptions{
 		StartToCloseTimeout:    time.Hour * 24,
 		HeartbeatTimeout:       time.Minute * 5,
@@ -31,7 +39,7 @@ func (w Workflow) ImportLayerWorkflow(ctx workflow.Context, event job.Event) err
 	ctx = workflow.WithActivityOptions(ctx, ao)
 	logger := workflow.GetLogger(ctx)
 
-	err := workflow.ExecuteActivity(ctx, w.service.UpdateJobStatus, UpdateJobStatusRequest{
+	err := workflow.ExecuteActivity(ctx, w.service.UpdateJob, UpdateJobStatusRequest{
 		WorkflowId: event.WorkflowId,
 		Status:     JobStatusProcessing,
 	}).Get(ctx, nil)
@@ -41,12 +49,16 @@ func (w Workflow) ImportLayerWorkflow(ctx workflow.Context, event job.Event) err
 	}
 
 	var importResult ImportLayerResponse
-	err = workflow.ExecuteActivity(ctx, w.service.ImportLayer, event.Args["key"]).Get(ctx, &importResult)
+	err = workflow.ExecuteActivity(ctx, w.service.ImportLayer, ImportLayerRequest{
+		FileKey: fileKey,
+	}).Get(ctx, &importResult)
 	if err != nil {
-		_ = workflow.ExecuteActivity(ctx, w.service.UpdateJobStatus, UpdateJobStatusRequest{
+		_ = workflow.ExecuteActivity(ctx, w.service.UpdateJob, UpdateJobStatusRequest{
 			WorkflowId: event.WorkflowId,
 			Status:     JobStatusFailed,
+			ErrorMsg:   err.Error(),
 		}).Get(ctx, nil)
+
 		_ = workflow.ExecuteActivity(ctx, w.service.SendNotification, SendNotificationRequest{
 			WorkflowId: event.WorkflowId,
 			Status:     "failed",
@@ -55,7 +67,28 @@ func (w Workflow) ImportLayerWorkflow(ctx workflow.Context, event job.Event) err
 		return err
 	}
 
-	err = workflow.ExecuteActivity(ctx, w.service.UpdateJobStatus, UpdateJobStatusRequest{
+	var createLayer CreateLayerResponse
+	err = workflow.ExecuteActivity(ctx, w.service.CreateLayer, CreateLayerRequest{LayerName: importResult.LayerName}).
+		Get(ctx, &createLayer)
+	if err != nil {
+		var dropTable DropLayerResponse
+		_ = workflow.ExecuteActivity(ctx, w.service.DropLayerTable, DropLayerRequest{TableName: importResult.LayerName}).Get(
+			ctx, &dropTable)
+
+		_ = workflow.ExecuteActivity(ctx, w.service.UpdateJob, UpdateJobStatusRequest{
+			WorkflowId: event.WorkflowId,
+			Status:     JobStatusFailed,
+			ErrorMsg:   err.Error(),
+		})
+		_ = workflow.ExecuteActivity(ctx, w.service.SendNotification, SendNotificationRequest{
+			WorkflowId: event.WorkflowId,
+			Status:     "failed",
+		})
+		logger.Error("Failed to create layer", "Error", err)
+		return err
+	}
+
+	err = workflow.ExecuteActivity(ctx, w.service.UpdateJob, UpdateJobStatusRequest{
 		WorkflowId: event.WorkflowId,
 		Status:     JobStatusComplete,
 	}).Get(ctx, nil)

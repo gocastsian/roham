@@ -110,8 +110,10 @@ func startWorkers(app Application, wg *sync.WaitGroup) {
 
 		newWorker.RegisterWorkflow(app.Workflow.ImportLayerWorkflow)
 		newWorker.RegisterActivity(app.layerSrv.ImportLayer)
-		newWorker.RegisterActivity(app.layerSrv.UpdateJobStatus)
+		newWorker.RegisterActivity(app.layerSrv.UpdateJob)
 		newWorker.RegisterActivity(app.layerSrv.SendNotification)
+		newWorker.RegisterActivity(app.layerSrv.CreateLayer)
+		newWorker.RegisterActivity(app.layerSrv.DropLayerTable)
 
 		if err := newWorker.Start(); err != nil {
 			log.Fatalf("error in running newWorker with err: %v", err)

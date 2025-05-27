@@ -43,3 +43,12 @@ func (r LayerRepo) CreateLayer(ctx context.Context, layer service.LayerEntity) (
 
 	return id, nil
 }
+
+func (r LayerRepo) DropTable(ctx context.Context, tableName string) (bool, error) {
+	query := fmt.Sprintf(`drop table if exists %s;`, tableName)
+	err := r.PostgreSQL.QueryRowContext(ctx, query)
+	if err != nil {
+		return false, fmt.Errorf("failed to drop table: %w", err)
+	}
+	return true, nil
+}

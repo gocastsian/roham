@@ -18,6 +18,7 @@ type JobEntity struct {
 	ID        types.ID  `json:"id"`
 	Token     string    `json:"token"`
 	Status    JobStatus `json:"Status"`
+	Error     string    `json:"Error"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
