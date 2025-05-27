@@ -53,10 +53,12 @@ func (w Workflow) ImportLayerWorkflow(ctx workflow.Context, event job.Event) err
 		FileKey: fileKey,
 	}).Get(ctx, &importResult)
 	if err != nil {
+		errMsg := err.Error()
+
 		_ = workflow.ExecuteActivity(ctx, w.service.UpdateJob, UpdateJobStatusRequest{
 			WorkflowId: event.WorkflowId,
 			Status:     JobStatusFailed,
-			ErrorMsg:   err.Error(),
+			ErrorMsg:   &errMsg,
 		}).Get(ctx, nil)
 
 		_ = workflow.ExecuteActivity(ctx, w.service.SendNotification, SendNotificationRequest{
@@ -71,6 +73,8 @@ func (w Workflow) ImportLayerWorkflow(ctx workflow.Context, event job.Event) err
 	err = workflow.ExecuteActivity(ctx, w.service.CreateLayer, CreateLayerRequest{LayerName: importResult.LayerName}).
 		Get(ctx, &createLayer)
 	if err != nil {
+		errMsg := err.Error()
+
 		var dropTable DropLayerResponse
 		_ = workflow.ExecuteActivity(ctx, w.service.DropLayerTable, DropLayerRequest{TableName: importResult.LayerName}).Get(
 			ctx, &dropTable)
@@ -78,7 +82,7 @@ func (w Workflow) ImportLayerWorkflow(ctx workflow.Context, event job.Event) err
 		_ = workflow.ExecuteActivity(ctx, w.service.UpdateJob, UpdateJobStatusRequest{
 			WorkflowId: event.WorkflowId,
 			Status:     JobStatusFailed,
-			ErrorMsg:   err.Error(),
+			ErrorMsg:   &errMsg,
 		})
 		_ = workflow.ExecuteActivity(ctx, w.service.SendNotification, SendNotificationRequest{
 			WorkflowId: event.WorkflowId,

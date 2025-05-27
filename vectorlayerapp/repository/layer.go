@@ -45,10 +45,21 @@ func (r LayerRepo) CreateLayer(ctx context.Context, layer service.LayerEntity) (
 }
 
 func (r LayerRepo) DropTable(ctx context.Context, tableName string) (bool, error) {
-	query := fmt.Sprintf(`drop table if exists %s;`, tableName)
-	err := r.PostgreSQL.QueryRowContext(ctx, query)
+	query := `drop table if exists $1;`
+	err := r.PostgreSQL.QueryRowContext(ctx, query, tableName)
 	if err != nil {
 		return false, fmt.Errorf("failed to drop table: %w", err)
 	}
 	return true, nil
+}
+
+func (r LayerRepo) GetLayerByName(ctx context.Context, name string) (service.LayerEntity, error) {
+	query := `select * from layers where name = $1;`
+
+	var layer service.LayerEntity
+	err := r.PostgreSQL.QueryRowContext(ctx, query, name).Scan(&layer.ID, &layer.Name, &layer.DefaultStyle, &layer.CreatedAt, &layer.UpdatedAt)
+	if err != nil {
+		return service.LayerEntity{}, fmt.Errorf("failed to read layer %s: %w", name, err)
+	}
+	return layer, nil
 }

@@ -11,7 +11,7 @@ type ScheduleImportLayerResponse struct {
 type UpdateJobStatusRequest struct {
 	WorkflowId string
 	Status     JobStatus
-	ErrorMsg   string
+	ErrorMsg   *string
 }
 type UpdateJobStatusResponse struct{}
 

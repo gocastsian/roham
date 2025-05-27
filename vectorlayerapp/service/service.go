@@ -22,6 +22,7 @@ type Repository interface {
 	UpdateJob(ctx context.Context, job JobEntity) (bool, error)
 	CreateLayer(ctx context.Context, layer LayerEntity) (types.ID, error)
 	DropTable(ctx context.Context, tableName string) (bool, error)
+	GetLayerByName(ctx context.Context, name string) (LayerEntity, error)
 }
 
 type Scheduler interface {
@@ -199,19 +200,24 @@ func (s Service) SendNotification(ctx context.Context, req SendNotificationReque
 }
 
 func (s Service) CreateLayer(ctx context.Context, req CreateLayerRequest) (CreateLayerResponse, error) {
-	layer, err := s.repository.CreateLayer(ctx, LayerEntity{
-		Name:         req.LayerName,
-		DefaultStyle: "default",
-	})
+	getLayer, err := s.repository.GetLayerByName(ctx, req.LayerName)
 	if err != nil {
-		//TODO: use saga to revert created layer
-		return CreateLayerResponse{}, fmt.Errorf("failed to create layer %s: %w", req.LayerName, err)
+		createLayer, err := s.repository.CreateLayer(ctx, LayerEntity{
+			Name:         req.LayerName,
+			DefaultStyle: "default",
+		})
+		if err != nil {
+			return CreateLayerResponse{}, fmt.Errorf("failed to create createLayer %s: %w", req.LayerName, err)
+		}
+
+		return CreateLayerResponse{
+			ID: createLayer,
+		}, nil
 	}
 
 	return CreateLayerResponse{
-		ID: layer,
+		ID: getLayer.ID,
 	}, nil
-
 }
 
 func (s Service) DropLayerTable(ctx context.Context, req DropLayerRequest) (DropLayerResponse, error) {
