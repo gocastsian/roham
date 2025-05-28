@@ -16,7 +16,8 @@ type Storage struct {
 
 func New(cfg storageprovider.StorageConfig) (*Storage, error) {
 	return &Storage{
-		cfg: cfg,
+		cfg:      cfg,
+		basePath: cfg.BasePath,
 	}, nil
 }
 
@@ -34,8 +35,7 @@ func (s *Storage) GetFile(ctx context.Context, storageName, fileKey string) (io.
 func (s *Storage) GeneratePreSignedURL(storageName, key string, duration time.Duration) (string, error) {
 
 	//todo implement custom pre-signed url using database
-
-	url := fmt.Sprintf("http://localhost:5006/storages/%s/files/%s", storageName, key)
+	url := fmt.Sprintf("http://localhost:5006/v1/files/%s/download", storageName, key)
 	return url, nil
 
 }

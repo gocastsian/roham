@@ -45,7 +45,7 @@ This project provides two file server (upload and download) for efficient file h
 ### Downloader Service (`http://localhost:5005`)
 
 - `GET /api/v1/files/:key/download`: Direct download.
-- `GET /api/v1/files/:key/download`: Download using pre-signed-url.
+- `GET /api/v1/files/:key/download-using-pre-signed-url`: Download using pre-signed-url.
 
 ## Futures
 
@@ -53,6 +53,6 @@ This project provides two file server (upload and download) for efficient file h
 - [x] Direct upload to s3/minio.
 - [x] Download a file by ID.
 - [x] Implementing a repository and store metadata in a relational database.
-- [ ] Validating uploads base on specific upload type (avatars, layers and ...).
+- [x] Validating uploads base on specific upload type (avatars, layers and ...).
 
 

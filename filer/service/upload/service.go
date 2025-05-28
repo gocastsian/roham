@@ -2,11 +2,10 @@ package upload
 
 import (
 	"context"
-	"errors"
-	"github.com/gocastsian/roham/filer/service/storage"
+	"fmt"
+	"github.com/gocastsian/roham/filer/service/filestorage"
 	"github.com/gocastsian/roham/types"
 	"log/slog"
-	"strconv"
 	"time"
 )
 
@@ -25,33 +24,27 @@ func NewUploadService(l *slog.Logger, fileMetadataRepo FileMetadataRepo, storage
 }
 
 type StorageFinder interface {
-	FindByName(ctx context.Context, name string) (storage.Storage, error)
+	FindByID(ctx context.Context, id types.ID) (filestorage.Storage, error)
 }
 
 type FileMetadataRepo interface {
-	InsertFileMetadata(ctx context.Context, fileMetadata storage.FileMetadata) (types.ID, error)
+	InsertFileMetadata(ctx context.Context, fileMetadata filestorage.FileMetadata) (types.ID, error)
 }
 
-func (s *Service) OnCompletedUploads(ctx context.Context, input storage.CreateFileMetadataInput) error {
+func (s *Service) OnCompletedUploads(ctx context.Context, i filestorage.CreateFileMetadataInput) error {
 
-	//s.logger.Info("Upload completed. FileName : " + input.FileName)
+	//s.logger.Info("Upload completed. FileName : " + i.FileName)
 
-	targetStorage, err := s.storageFinder.FindByName(ctx, input.TargetStorageName)
-
-	if err != nil {
-		return err
-	}
-
-	newFileMetadata := storage.FileMetadata{
-		StorageID: targetStorage.ID,
-		FileKey:   "",
-		FileName:  "",
-		MimeType:  "",
-		Size:      "",
+	newFileMetadata := filestorage.FileMetadata{
+		StorageID: i.TargetStorageID,
+		FileKey:   i.FileKey,
+		FileName:  i.FileName,
+		MimeType:  i.MimeType,
+		FileSize:  i.Size,
 		CreatedAt: time.Time{},
 		ClaimedAt: nil,
 	}
-	_, err = s.fileMetadataRepo.InsertFileMetadata(ctx, newFileMetadata)
+	_, err := s.fileMetadataRepo.InsertFileMetadata(ctx, newFileMetadata)
 	if err != nil {
 		return err
 	}
@@ -59,18 +52,56 @@ func (s *Service) OnCompletedUploads(ctx context.Context, input storage.CreateFi
 	return nil
 }
 
-func (s *Service) ValidateUpload(storageKind string, size int64) error {
-	s.logger.Info("Validate upload request. size is : " + strconv.Itoa(int(size)))
+func (s *Service) ValidateUpload(targetStorageID types.ID, mimeType string, size int64) error {
 
-	//todo get storage kinds from config
-	switch storageKind {
-	case "avatar":
-		if size > 10240 {
-			return errors.New("file size is too big")
+	ctx := context.Background()
+	storage, err := s.storageFinder.FindByID(ctx, targetStorageID)
+	if err != nil {
+		return err
+	}
+	const (
+		GB = 1024 * 1024 * 1024
+		MB = 1024 * 1024
+		KB = 1024
+	)
+	// todo get from validation config
+	uploadConstraints := map[string]struct {
+		MaxSize      int64
+		AllowedTypes []string
+	}{
+		"avatar": {
+			MaxSize:      5 * MB,
+			AllowedTypes: []string{"image/jpeg", "image/jpg"},
+		},
+		"map-layer": {
+			MaxSize:      2 * GB,
+			AllowedTypes: []string{}, // empty means all types allowed or define specific ones
+		},
+	}
+
+	// Check if storage kind is valid
+	constraint, exists := uploadConstraints[storage.Kind]
+	if !exists {
+		return fmt.Errorf("unsupported storage kind: %s", storage.Kind)
+	}
+
+	// Validate file size
+	if size > constraint.MaxSize {
+		return fmt.Errorf("file size exceeds maximum allowed (%d bytes)", constraint.MaxSize)
+	}
+
+	// Validate MIME type if constraints are defined
+	if len(constraint.AllowedTypes) > 0 {
+		validType := false
+		for _, allowedType := range constraint.AllowedTypes {
+			if mimeType == allowedType {
+				validType = true
+				break
+			}
 		}
-	case "map-layer":
-		if size > 1024000 {
-			return errors.New("file size is too big")
+		if !validType {
+			return fmt.Errorf("unsupported file type: %s. Allowed types: %v",
+				mimeType, constraint.AllowedTypes)
 		}
 	}
 
