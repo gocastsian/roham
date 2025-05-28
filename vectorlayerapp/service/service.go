@@ -21,13 +21,15 @@ type Repository interface {
 	GetJobByToken(ctx context.Context, token string) (JobEntity, error)
 	UpdateJob(ctx context.Context, job JobEntity) (bool, error)
 	CreateLayer(ctx context.Context, layer LayerEntity) (types.ID, error)
+	DropTable(ctx context.Context, tableName string) (bool, error)
+	GetLayerByName(ctx context.Context, name string) (LayerEntity, error)
 }
 
 type Scheduler interface {
 	Add(ctx context.Context, event job.Event) (string, error)
 }
 
-type QueryClient interface {
+type FilerClient interface {
 	DownloadShapeFile(fileKey string) ([]byte, error)
 }
 
@@ -35,15 +37,15 @@ type Service struct {
 	repository  Repository
 	validator   Validator
 	scheduler   Scheduler
-	queryClient QueryClient
+	filerClient FilerClient
 }
 
-func NewService(repo Repository, validator Validator, scheduler Scheduler, queryClient QueryClient) Service {
+func NewService(repo Repository, validator Validator, scheduler Scheduler, queryClient FilerClient) Service {
 	return Service{
 		repository:  repo,
 		validator:   validator,
 		scheduler:   scheduler,
-		queryClient: queryClient,
+		filerClient: queryClient,
 	}
 }
 
@@ -87,10 +89,11 @@ func (s Service) ScheduleImportLayer(ctx context.Context, fileKey string) (Sched
 	}, nil
 }
 
-func (s Service) UpdateJobStatus(ctx context.Context, req UpdateJobStatusRequest) error {
+func (s Service) UpdateJob(ctx context.Context, req UpdateJobStatusRequest) error {
 	_, err := s.repository.UpdateJob(ctx, JobEntity{
 		Token:  req.WorkflowId,
 		Status: req.Status,
+		Error:  req.ErrorMsg,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to update job Status: %w", err)
@@ -98,7 +101,7 @@ func (s Service) UpdateJobStatus(ctx context.Context, req UpdateJobStatusRequest
 	return err
 }
 
-func (s Service) ImportLayer(ctx context.Context, fileKey string) (ImportLayerResponse, error) {
+func (s Service) ImportLayer(ctx context.Context, req ImportLayerRequest) (ImportLayerResponse, error) {
 	tempDir, err := os.MkdirTemp("", "shapefile-*")
 	if err != nil {
 		return ImportLayerResponse{}, fmt.Errorf("failed to create temporary directory: %w", err)
@@ -107,12 +110,12 @@ func (s Service) ImportLayer(ctx context.Context, fileKey string) (ImportLayerRe
 
 	log.Printf("Created temporary directory: %s", tempDir)
 
-	data, err := s.queryClient.DownloadShapeFile(fileKey)
+	data, err := s.filerClient.DownloadShapeFile(req.FileKey)
 	if err != nil {
-		return ImportLayerResponse{}, fmt.Errorf("failed to download %s: %w", fileKey, err)
+		return ImportLayerResponse{}, fmt.Errorf("failed to download %s: %w", req.FileKey, err)
 	}
 
-	zipPath := filepath.Join(tempDir, filepath.Base(fileKey)+".zip")
+	zipPath := filepath.Join(tempDir, filepath.Base(req.FileKey)+".zip")
 	if err := os.WriteFile(zipPath, data, 0644); err != nil {
 		return ImportLayerResponse{}, fmt.Errorf("failed to write zip file %s: %w", zipPath, err)
 	}
@@ -165,20 +168,10 @@ func (s Service) ImportLayer(ctx context.Context, fileKey string) (ImportLayerRe
 		return ImportLayerResponse{}, fmt.Errorf("ogr2ogr failed: %w", err)
 	}
 
-	_, err = s.repository.CreateLayer(ctx, LayerEntity{
-		Name:         layerName,
-		DefaultStyle: "default",
-	})
-	if err != nil {
-		//TODO: use saga to revert created layer
-		return ImportLayerResponse{}, fmt.Errorf("failed to create layer %s: %w", layerName, err)
-	}
-
-	time.Sleep(10 * time.Second)
-
 	log.Println("Shapefile imported successfully!")
 	return ImportLayerResponse{
-		Status: true,
+		Status:    true,
+		LayerName: layerName,
 	}, nil
 }
 
@@ -204,4 +197,37 @@ func (s Service) SendNotification(ctx context.Context, req SendNotificationReque
 	log.Println(message)
 
 	return nil
+}
+
+func (s Service) CreateLayer(ctx context.Context, req CreateLayerRequest) (CreateLayerResponse, error) {
+	getLayer, err := s.repository.GetLayerByName(ctx, req.LayerName)
+	if err != nil {
+		createLayer, err := s.repository.CreateLayer(ctx, LayerEntity{
+			Name:         req.LayerName,
+			DefaultStyle: "default",
+		})
+		if err != nil {
+			return CreateLayerResponse{}, fmt.Errorf("failed to create createLayer %s: %w", req.LayerName, err)
+		}
+
+		return CreateLayerResponse{
+			ID: createLayer,
+		}, nil
+	}
+
+	return CreateLayerResponse{
+		ID: getLayer.ID,
+	}, nil
+}
+
+func (s Service) DropLayerTable(ctx context.Context, req DropLayerRequest) (DropLayerResponse, error) {
+	res, err := s.repository.DropTable(ctx, req.TableName)
+	if err != nil {
+		return DropLayerResponse{}, fmt.Errorf("failed to drop table %s: %w", req.TableName, err)
+	}
+
+	return DropLayerResponse{
+		Success: res,
+	}, nil
+
 }

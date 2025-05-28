@@ -3,8 +3,10 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"github.com/gocastsian/roham/types"
 	"github.com/gocastsian/roham/vectorlayerapp/service"
+	"strings"
 )
 
 type JobRepo struct {
@@ -47,7 +49,7 @@ func (r LayerRepo) GetJobByToken(ctx context.Context, token string) (service.Job
 	}
 	defer stmt.Close()
 
-	err = stmt.QueryRowContext(ctx, token).Scan(&id, &job.Token, &job.Status, &job.CreatedAt, &job.UpdatedAt)
+	err = stmt.QueryRowContext(ctx, token).Scan(&id, &job.Token, &job.Status, &job.Error, &job.CreatedAt, &job.UpdatedAt)
 	if err != nil {
 		return job, err
 	}
@@ -56,17 +58,40 @@ func (r LayerRepo) GetJobByToken(ctx context.Context, token string) (service.Job
 	return job, nil
 
 }
-
 func (r LayerRepo) UpdateJob(ctx context.Context, job service.JobEntity) (bool, error) {
-	query := `UPDATE jobs SET status = $1 WHERE token = $2;`
+	setParts := []string{}
+	args := []interface{}{}
+	argIdx := 1
+
+	if job.Status != "" {
+		setParts = append(setParts, fmt.Sprintf("status = $%d", argIdx))
+		args = append(args, job.Status)
+		argIdx++
+	}
+
+	if job.Error != nil {
+		setParts = append(setParts, fmt.Sprintf("error = $%d", argIdx))
+		args = append(args, job.Error)
+		argIdx++
+	}
+
+	if len(setParts) == 0 {
+		return false, fmt.Errorf("no fields to update")
+	}
+
+	query := fmt.Sprintf("UPDATE jobs SET %s WHERE token = $%d", strings.Join(setParts, ", "), argIdx)
+	args = append(args, job.Token)
+
 	stmt, err := r.PostgreSQL.PrepareContext(ctx, query)
 	if err != nil {
 		return false, err
 	}
 	defer stmt.Close()
-	_, err = stmt.ExecContext(ctx, job.Status, job.Token)
+
+	_, err = stmt.ExecContext(ctx, args...)
 	if err != nil {
-		return true, err
+		return false, err
 	}
+
 	return true, nil
 }
