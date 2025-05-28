@@ -7,7 +7,7 @@ import (
 	"github.com/gocastsian/roham/filer/delivery/http"
 	"github.com/gocastsian/roham/filer/delivery/tus"
 	"github.com/gocastsian/roham/filer/repository"
-	"github.com/gocastsian/roham/filer/service/storage"
+	"github.com/gocastsian/roham/filer/service/filestorage"
 	"github.com/gocastsian/roham/filer/service/upload"
 	"github.com/gocastsian/roham/filer/storageprovider/storagefactory"
 	cfgloader "github.com/gocastsian/roham/pkg/cfg_loader"
@@ -83,12 +83,12 @@ func serveFiler() {
 		log.Fatalf("Failed to create storage provider: %s", err)
 	}
 
-	storageService := storage.NewStorageService(storageProvider, fileRepo, storageRepo)
+	storageService := filestorage.NewStorageService(storageProvider, fileRepo, storageRepo)
 	handler := http.NewHandler(storageService)
 	httpServer := http.New(httpserver.New(cfg.HTTPServer), handler, appLogger)
 
 	// Setup UploadServer
-	uploadService := upload.NewUploadService(appLogger, fileRepo)
+	uploadService := upload.NewUploadService(appLogger, fileRepo, storageRepo)
 	tusHandler, err := tusdadapter.New(storageProvider, &uploadService)
 	if err != nil {
 		log.Fatalf("Failed to create tus handler for storage type %s: %v", cfg.Storage.Type, err)

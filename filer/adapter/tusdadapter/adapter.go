@@ -6,6 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/gocastsian/roham/filer/storageprovider"
 	"github.com/gocastsian/roham/filer/storageprovider/s3storage"
+	"github.com/gocastsian/roham/types"
 	"github.com/tus/tusd/pkg/filestore"
 	tusd "github.com/tus/tusd/pkg/handler"
 	"github.com/tus/tusd/pkg/s3store"
@@ -13,10 +14,11 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"strconv"
 )
 
 type UploadValidator interface {
-	ValidateUpload(targetBucket string, size int64) error
+	ValidateUpload(targetStorageID types.ID, mimeType string, size int64) error
 }
 
 func NewHandlerWithS3Store(storageName string, s3 *s3.S3, v UploadValidator) (*tusd.Handler, error) {
@@ -31,11 +33,13 @@ func NewHandlerWithS3Store(storageName string, s3 *s3.S3, v UploadValidator) (*t
 		BasePath:      "/uploads/",
 		StoreComposer: composer,
 		PreUploadCreateCallback: func(hook tusd.HookEvent) error {
-			targetBucket := hook.HTTPRequest.Header.Get("Bucket")
-			if targetBucket == "" {
-				return errors.New("bucket name is required")
+
+			storageID, err := extractStorageIDFromHook(hook)
+			if err != nil {
+				return err
 			}
-			return v.ValidateUpload(targetBucket, hook.Upload.Size)
+
+			return v.ValidateUpload(storageID, hook.Upload.MetaData["filetype"], hook.Upload.Size)
 		},
 		NotifyCompleteUploads:   true,
 		NotifyTerminatedUploads: true,
@@ -71,12 +75,12 @@ func NewHandlerWithFileStore(storageName, basePath string, v UploadValidator) (*
 		StoreComposer:         composer,
 		NotifyCompleteUploads: true,
 		PreUploadCreateCallback: func(hook tusd.HookEvent) error {
-
-			targetBucket := hook.HTTPRequest.Header.Get("Bucket")
-			if targetBucket == "1" {
-				return tusd.NewHTTPError(errors.New("missing required header: Bucket"), http.StatusUnprocessableEntity)
+			storageID, err := extractStorageIDFromHook(hook)
+			if err != nil {
+				return err
 			}
-			return v.ValidateUpload(targetBucket, hook.Upload.Size)
+			hook.Upload.MetaData["TARGET-STORAGE-ID"] = fmt.Sprintf("%d", storageID)
+			return v.ValidateUpload(storageID, hook.Upload.MetaData["filetype"], hook.Upload.Size)
 		},
 		NotifyTerminatedUploads: true,
 		NotifyUploadProgress:    true,
@@ -111,4 +115,18 @@ func New(p storageprovider.Provider, v UploadValidator) (*tusd.Handler, error) {
 	}
 
 	return nil, errors.New("unknown storage type")
+}
+
+func extractStorageIDFromHook(hook tusd.HookEvent) (types.ID, error) {
+	targetStorageID := hook.HTTPRequest.Header.Get("X-STORAGE-ID")
+	if targetStorageID == "" {
+		return 0, tusd.NewHTTPError(errors.New("missing required header: X-STORAGE-ID"), http.StatusUnprocessableEntity)
+	}
+
+	storageID, err := strconv.ParseInt(targetStorageID, 10, 64)
+	if err != nil {
+		return 0, errors.New("invalid X-STORAGE-ID")
+	}
+
+	return types.ID(storageID), nil
 }
