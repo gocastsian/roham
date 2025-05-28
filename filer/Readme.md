@@ -1,9 +1,9 @@
 # File Handling Microservices
 
-This project provides two Golang microservices for efficient file handling:
+This project provides two file server (upload and download) for efficient file handling:
 
-- **Uploader**: Handles resumable file uploads using the `tusd` protocol, storing files in a MinIO object storage backend.
-- **Filer**: Manages file downloads and metadata retrieval from MinIO.
+- **Upload Server**: Handles resumable file uploads using the `tusd` protocol, storing files in a MinIO object storage backend.
+- **File Server**: Manages file downloads and metadata retrieval from Filesystem/S3.
 
 ## Features
 
@@ -31,7 +31,7 @@ This project provides two Golang microservices for efficient file handling:
 
     - URL: `http://localhost:9000`
     - Credentials: `minioadmin/minioadmin`
-    - Create a bucket (e.g., `files`) for storing uploads.
+    - Create a bucket (e.g., `temp-storage`) for storing uploads.
 
 
 ## API Endpoints
@@ -45,14 +45,14 @@ This project provides two Golang microservices for efficient file handling:
 ### Downloader Service (`http://localhost:5005`)
 
 - `GET /api/v1/files/:key/download`: Direct download.
-- `GET /api/v1/files/:key/download`: Download using pre-signed-url.
+- `GET /api/v1/files/:key/download-using-pre-signed-url`: Download using pre-signed-url.
 
 ## Futures
 
 - [x] Upload files using tusd handler.(filesystem store)
 - [x] Direct upload to s3/minio.
 - [x] Download a file by ID.
-- [ ] Validating uploads base on specific upload type (avatars, layers and ...).
-- [ ] Implementing a repository and store metadata in a relational database.
+- [x] Implementing a repository and store metadata in a relational database.
+- [x] Validating uploads base on specific upload type (avatars, layers and ...).
 
 

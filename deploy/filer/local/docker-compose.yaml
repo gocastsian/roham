@@ -25,6 +25,17 @@ services:
       - "traefik.http.services.${SERVICE_NAME}_filer.loadbalancer.server.port=5005"
       - "traefik.http.routers.${SERVICE_NAME}_filer.middlewares=${SERVICE_NAME}_strip_filer"
       - "traefik.http.middlewares.${SERVICE_NAME}_strip_filer.stripprefix.prefixes=/filer"
+  filer-db:
+    image: postgres:17.2-alpine
+    environment:
+      - 'POSTGRES_DB=filer_db'
+      - 'POSTGRES_USER=roham'
+      - 'POSTGRES_PASSWORD=secret'
+    restart: always
+    profiles:
+      - filer
+    ports:
+      - "5433:5432"
   minio:
     image: minio/minio:latest
     environment:

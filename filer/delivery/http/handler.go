@@ -1,7 +1,7 @@
 package http
 
 import (
-	"github.com/gocastsian/roham/filer/service/file"
+	"github.com/gocastsian/roham/filer/service/filestorage"
 	"net/http"
 	"time"
 
@@ -12,24 +12,25 @@ import (
 )
 
 type Handler struct {
-	FileService file.Service
+	storageService filestorage.Service
 }
 
-func NewHandler(fileSrv file.Service) Handler {
+func NewHandler(srv filestorage.Service) Handler {
 	return Handler{
-		FileService: fileSrv,
+		storageService: srv,
 	}
 }
 
 func (h Handler) DownloadFile(c echo.Context) error {
 
 	key := c.Param("key")
-	body, err := h.FileService.GetFile(c.Request().Context(), key)
+
+	body, err := h.storageService.GetFileByKey(c.Request().Context(), key)
 	if err != nil {
-		if vErr, ok := err.(validator.Error); ok {
-			return c.JSON(vErr.StatusCode(), vErr)
+		err := handleError(c, err)
+		if err != nil {
+			return err
 		}
-		return c.JSON(statuscode.MapToHTTPStatusCode(err.(errmsg.ErrorResponse)), err)
 	}
 
 	// todo set headers using res.metadata
@@ -42,7 +43,9 @@ func (h Handler) DownloadFile(c echo.Context) error {
 
 func (h Handler) DownloadFileUsingPreSignedURL(c echo.Context) error {
 	//todo get pre-signed duration using config
-	url, err := h.FileService.GeneratePreSignedURL(c.Request().Context(), c.Param("key"), 30*time.Minute)
+
+	storageName := "temp-storage"
+	url, err := h.storageService.GeneratePreSignedURL(c.Request().Context(), storageName, c.Param("key"), 30*time.Minute)
 	if err != nil {
 		if vErr, ok := err.(validator.Error); ok {
 			return c.JSON(vErr.StatusCode(), vErr)
@@ -53,8 +56,38 @@ func (h Handler) DownloadFileUsingPreSignedURL(c echo.Context) error {
 	return c.Redirect(http.StatusTemporaryRedirect, url)
 }
 
+func (h Handler) CreateStorage(c echo.Context) error {
+
+	var input filestorage.CreateStorageInput
+
+	if err := c.Bind(&input); err != nil {
+		return c.JSON(http.StatusBadRequest, errmsg.ErrorResponse{Message: err.Error()})
+	}
+	_, err := h.storageService.CreateStorage(c.Request().Context(), filestorage.CreateStorageInput{
+		Name: input.Name,
+		Kind: input.Kind,
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s Server) healthCheck(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{
 		"message": "everything is good!",
+	})
+}
+
+func handleError(c echo.Context, err error) error {
+	if vErr, ok := err.(validator.Error); ok {
+		return c.JSON(vErr.StatusCode(), vErr)
+	}
+	if eResp, ok := err.(errmsg.ErrorResponse); ok {
+		return c.JSON(statuscode.MapToHTTPStatusCode(eResp), eResp)
+	}
+	return c.JSON(http.StatusInternalServerError, errmsg.ErrorResponse{
+		//todo show error if debug is true
+		Message: "Internal server error : " + err.Error(),
 	})
 }
