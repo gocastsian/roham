@@ -3,11 +3,10 @@ package filer
 import (
 	"context"
 	"fmt"
+	"github.com/gocastsian/roham/filer/adapter/tusdadapter"
 	"github.com/gocastsian/roham/filer/delivery/http"
 	"github.com/gocastsian/roham/filer/delivery/tus"
-	"github.com/gocastsian/roham/filer/service/storage"
-	"github.com/gocastsian/roham/types"
-
+	"github.com/gocastsian/roham/filer/service/filestorage"
 	"github.com/gocastsian/roham/pkg/postgresql"
 	"log/slog"
 	"os"
@@ -20,14 +19,14 @@ type Application struct {
 	ShutdownCtx  context.Context
 	Config       *Config
 	Logger       *slog.Logger
-	storageSvc   storage.Service
+	storageSvc   filestorage.Service
 	httpHandler  http.Handler
 	HTTPServer   http.Server
 	UploadServer tus.Server
 	postgresConn *postgresql.Database
 }
 
-func Setup(ctx context.Context, cfg *Config, logger *slog.Logger, httpServer http.Server, uploadServer tus.Server, storageSvc storage.Service) Application {
+func Setup(ctx context.Context, cfg *Config, logger *slog.Logger, httpServer http.Server, uploadServer tus.Server, storageSvc filestorage.Service) Application {
 	return Application{
 		ShutdownCtx:  ctx,
 		Config:       cfg,
@@ -46,15 +45,15 @@ func (app Application) Start() {
 	defer stop()
 
 	// start http server for download of files
-	//wg.Add(1)
-	//go func() {
-	//	defer wg.Done()
-	//	app.Logger.Info(fmt.Sprintf("HTTP server started on %d", app.Config.HTTPServer.Port))
-	//	if err := app.HTTPServer.Serve(); err != nil {
-	//		app.Logger.Error(fmt.Sprintf("error in HTTP server on %d", app.Config.HTTPServer.Port), err)
-	//	}
-	//	app.Logger.Info(fmt.Sprintf("HTTP server stopped %d", app.Config.HTTPServer.Port))
-	//}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		app.Logger.Info(fmt.Sprintf("HTTP server started on %d", app.Config.HTTPServer.Port))
+		if err := app.HTTPServer.Serve(); err != nil {
+			app.Logger.Error(fmt.Sprintf("error in HTTP server on %d", app.Config.HTTPServer.Port), err)
+		}
+		app.Logger.Info(fmt.Sprintf("HTTP server stopped %d", app.Config.HTTPServer.Port))
+	}()
 
 	// start http server for download of files
 	wg.Add(1)
@@ -77,47 +76,22 @@ func (app Application) Start() {
 				fmt.Printf("Upload created: %+v\n", info)
 			case info := <-app.UploadServer.EventHandler().CompleteUploads:
 
-				input := storage.CreateFileMetadataInput{
-					StorageID: 1,
-					FileKey:   info.Upload.ID,
-					FileName:  info.Upload.MetaData["filename"],
-					MimeType:  info.Upload.MetaData["filetype"],
-					Size:      info.Upload.Size,
+				event := tusdadapter.CompleteUploadsHookEvent(info)
+				input, err := event.ConvertToCreateFileMetadataInput()
+
+				if err != nil {
+					app.Logger.Error(err.Error())
+					return
 				}
-				go func(ctx context.Context, input storage.CreateFileMetadataInput) {
-					err := app.UploadServer.Handler.UploadService.OnCompletedUploads(ctx, input)
+
+				go func(ctx context.Context, i filestorage.CreateFileMetadataInput) {
+					err := app.UploadServer.Handler.UploadService.OnCompletedUploads(ctx, i)
 					if err != nil {
 						app.Logger.Error("Unable to handle OnCompletedUploads: %s", err.Error())
 
 					}
 				}(ctx, input)
 			}
-		}
-	}()
-
-	go func() {
-		for event := range app.UploadServer.Handler.TusHandler.CompleteUploads {
-			var bucketName string
-			if bucket, ok := event.Upload.MetaData["X-TARGET-STORAGE"]; ok {
-				bucketName = bucket
-			} else {
-				app.Logger.Error("No TARGET-STORAGE specified in header")
-				continue
-			}
-
-			go func(ctx context.Context, uploadID string, targetStorageName string, metaData map[string]string) {
-
-				input := storage.CreateFileMetadataInput{
-					TargetStorageName: targetStorageName,
-					FileKey:           uploadID,
-					FileName:          metaData["filename"],
-					MimeType:          metaData["filetype"],
-				}
-				err := app.UploadServer.Handler.UploadService.OnCompletedUploads(ctx, input)
-				if err != nil {
-					app.Logger.Error("Unable to handle OnCompletedUploads: %s", err.Error())
-				}
-			}(ctx, event.Upload.ID, bucketName, event.Upload.MetaData)
 		}
 	}()
 

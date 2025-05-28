@@ -23,10 +23,12 @@
             return;
         }
 
+        // X-STORAGE-ID It can be loaded from a config, selected by the user, or fetched from a strategy service.
+
         const upload = new tus.Upload(file, {
             endpoint: 'http://localhost:5006/uploads/',
             headers: {
-                "Bucket": "avatar"
+                "X-STORAGE-ID": 1
             },
             retryDelays: [0, 1000, 3000, 5000],
             metadata: {

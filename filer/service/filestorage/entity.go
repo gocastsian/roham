@@ -1,4 +1,4 @@
-package storage
+package filestorage
 
 import (
 	"github.com/gocastsian/roham/types"
@@ -17,7 +17,7 @@ type FileMetadata struct {
 	FileKey   string     `json:"file_key"`
 	FileName  string     `json:"file_name"`
 	MimeType  string     `json:"mime_type"`
-	Size      string     `json:"file_size"`
+	FileSize  int64      `json:"file_size"`
 	CreatedAt time.Time  `json:"created_at"`
 	ClaimedAt *time.Time `json:"claimed_at"`
 }

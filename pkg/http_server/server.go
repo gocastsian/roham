@@ -30,6 +30,7 @@ func New(cfg Config) Server {
 	e := echo.New()
 
 	e.Use(middleware.Logger())
+	//e.Use(middleware.Recover())
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		Skipper: func(c echo.Context) bool {
 			return cfg.Cors.Skip
