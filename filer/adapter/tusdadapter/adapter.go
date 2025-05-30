@@ -30,15 +30,20 @@ func NewHandlerWithS3Store(storageName string, s3 *s3.S3, v UploadValidator) (*t
 	store.UseIn(composer)
 
 	handler, err := tusd.NewHandler(tusd.Config{
-		BasePath:      "/uploads/",
+		BasePath: "/uploads/",
+		Cors: &tusd.CorsConfig{
+			AllowOrigin:   regexp.MustCompile(".*"),
+			AllowHeaders:  "*",
+			ExposeHeaders: "*",
+			AllowMethods:  "*",
+		},
 		StoreComposer: composer,
 		PreUploadCreateCallback: func(hook tusd.HookEvent) error {
-
 			storageID, err := extractStorageIDFromHook(hook)
 			if err != nil {
 				return err
 			}
-
+			hook.Upload.MetaData["TARGET-STORAGE-ID"] = fmt.Sprintf("%d", storageID)
 			return v.ValidateUpload(storageID, hook.Upload.MetaData["filetype"], hook.Upload.Size)
 		},
 		NotifyCompleteUploads:   true,
@@ -111,6 +116,7 @@ func New(p storageprovider.Provider, v UploadValidator) (*tusd.Handler, error) {
 		if !ok {
 			return nil, errors.New("not a s3 storage")
 		}
+		fmt.Println(p.Config())
 		return NewHandlerWithS3Store(p.Config().TempStorage, store.S3(), v)
 	}
 

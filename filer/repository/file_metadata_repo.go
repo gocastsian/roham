@@ -62,7 +62,7 @@ func (r FileMetadataRepo) InsertFileMetadata(ctx context.Context, fileMetadata f
 
 func (r FileMetadataRepo) FindByKey(ctx context.Context, key string) (filestorage.FileMetadata, error) {
 	query := `
-        SELECT id, storage_id, file_key, file_name, mime_type, file_size,created_at, claimed_at
+        SELECT id, storage_id, file_key, file_name, mime_type, file_size,created_at, updated_at
         FROM file_metadata WHERE file_key = $1
     `
 
@@ -81,7 +81,7 @@ func (r FileMetadataRepo) FindByKey(ctx context.Context, key string) (filestorag
 		&f.MimeType,
 		&f.FileSize,
 		&f.CreatedAt,
-		&f.ClaimedAt,
+		&f.UpdatedAt,
 	)
 
 	if err != nil {

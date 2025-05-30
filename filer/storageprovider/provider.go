@@ -10,6 +10,7 @@ type Provider interface {
 	GetFile(ctx context.Context, storageName, fileKey string) (io.ReadCloser, error)
 	GeneratePreSignedURL(storageName, fileKey string, duration time.Duration) (string, error)
 	MakeStorage(ctx context.Context, name string) error
+	MoveFileToStorage(targetFileKey, fromStorageName, toStorageName string) error
 	Config() StorageConfig
 }
 

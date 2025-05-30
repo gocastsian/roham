@@ -26,11 +26,14 @@ postgres_db:
   path_of_migration: './filer/repository/migrations'
 
 storage:
-  type: "filesystem"
+#  type: "filesystem"
+#  base_path: "./uploads"
+#  temp_storage: "temp-storage"
+
+  type: "s3"
   temp_storage: "temp-storage"
-  base_path: "./uploads"
-  region: ""
-  endpoint: "localhost:9000"
+  region: "ir"
+  endpoint: "http://localhost:9000"
   access_key: "minioadmin"
   secret_key: "minioadmin"
 

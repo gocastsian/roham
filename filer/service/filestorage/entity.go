@@ -1,8 +1,9 @@
 package filestorage
 
 import (
-	"github.com/gocastsian/roham/types"
 	"time"
+
+	"github.com/gocastsian/roham/types"
 )
 
 type Storage struct {
@@ -19,9 +20,5 @@ type FileMetadata struct {
 	MimeType  string     `json:"mime_type"`
 	FileSize  int64      `json:"file_size"`
 	CreatedAt time.Time  `json:"created_at"`
-	ClaimedAt *time.Time `json:"claimed_at"`
-}
-
-func (f FileMetadata) IsClaimed() bool {
-	return f.ClaimedAt != nil
+	UpdatedAt *time.Time `json:"updated_at"`
 }

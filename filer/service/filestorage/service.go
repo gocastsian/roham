@@ -2,13 +2,16 @@ package filestorage
 
 import (
 	"context"
+	"io"
+	"log/slog"
+	"time"
+
 	"github.com/gocastsian/roham/filer/storageprovider"
 	"github.com/gocastsian/roham/types"
-	"io"
-	"time"
 )
 
 type Service struct {
+	logger          *slog.Logger
 	storageProvider storageprovider.Provider
 	storageRepo     StorageRepository
 	fileRepo        FileMetadataRepo
@@ -24,7 +27,7 @@ type FileMetadataRepo interface {
 	FindByKey(ctx context.Context, key string) (FileMetadata, error)
 }
 
-func NewStorageService(p storageprovider.Provider, fr FileMetadataRepo, r StorageRepository) Service {
+func NewStorageService(l *slog.Logger, p storageprovider.Provider, fr FileMetadataRepo, r StorageRepository) Service {
 	return Service{
 		storageProvider: p,
 		fileRepo:        fr,
@@ -40,15 +43,12 @@ func (s Service) GetFileByKey(ctx context.Context, fileKey string) (io.ReadClose
 	}
 
 	var storageName string
-	if fileMetadata.IsClaimed() {
-		storage, err := s.storageRepo.FindByID(ctx, fileMetadata.StorageID)
-		if err != nil {
-			return nil, err
-		}
-		storageName = storage.Name
-	} else {
-		storageName = s.storageProvider.Config().TempStorage
+
+	storage, err := s.storageRepo.FindByID(ctx, fileMetadata.StorageID)
+	if err != nil {
+		return nil, err
 	}
+	storageName = storage.Name
 
 	return s.storageProvider.GetFile(ctx, storageName, fileKey)
 }
