@@ -83,12 +83,12 @@ func serveFiler() {
 		log.Fatalf("Failed to create storage provider: %s", err)
 	}
 
-	storageService := filestorage.NewStorageService(storageProvider, fileRepo, storageRepo)
+	storageService := filestorage.NewStorageService(appLogger, storageProvider, fileRepo, storageRepo)
 	handler := http.NewHandler(storageService)
 	httpServer := http.New(httpserver.New(cfg.HTTPServer), handler, appLogger)
 
 	// Setup UploadServer
-	uploadService := upload.NewUploadService(appLogger, fileRepo, storageRepo)
+	uploadService := upload.NewUploadService(appLogger, storageProvider, fileRepo, storageRepo)
 	tusHandler, err := tusdadapter.New(storageProvider, &uploadService)
 	if err != nil {
 		log.Fatalf("Failed to create tus handler for storage type %s: %v", cfg.Storage.Type, err)

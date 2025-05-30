@@ -3,23 +3,27 @@ package upload
 import (
 	"context"
 	"fmt"
-	"github.com/gocastsian/roham/filer/service/filestorage"
-	"github.com/gocastsian/roham/types"
 	"log/slog"
 	"time"
+
+	"github.com/gocastsian/roham/filer/service/filestorage"
+	"github.com/gocastsian/roham/filer/storageprovider"
+	"github.com/gocastsian/roham/types"
 )
 
 type Service struct {
 	logger           *slog.Logger
 	fileMetadataRepo FileMetadataRepo
 	storageFinder    StorageFinder
+	storageProvider  storageprovider.Provider
 }
 
-func NewUploadService(l *slog.Logger, fileMetadataRepo FileMetadataRepo, storageRepo StorageFinder) Service {
+func NewUploadService(l *slog.Logger, sp storageprovider.Provider, fileMetadataRepo FileMetadataRepo, storageRepo StorageFinder) Service {
 	return Service{
 		logger:           l,
 		fileMetadataRepo: fileMetadataRepo,
 		storageFinder:    storageRepo,
+		storageProvider:  sp,
 	}
 }
 
@@ -33,7 +37,15 @@ type FileMetadataRepo interface {
 
 func (s *Service) OnCompletedUploads(ctx context.Context, i filestorage.CreateFileMetadataInput) error {
 
-	//s.logger.Info("Upload completed. FileName : " + i.FileName)
+	storage, err := s.storageFinder.FindByID(ctx, i.TargetStorageID)
+	if err != nil {
+		return err
+	}
+
+	err = s.storageProvider.MoveFileToStorage(i.FileKey, s.storageProvider.Config().TempStorage, storage.Name)
+	if err != nil {
+		return err
+	}
 
 	newFileMetadata := filestorage.FileMetadata{
 		StorageID: i.TargetStorageID,
@@ -42,9 +54,9 @@ func (s *Service) OnCompletedUploads(ctx context.Context, i filestorage.CreateFi
 		MimeType:  i.MimeType,
 		FileSize:  i.Size,
 		CreatedAt: time.Time{},
-		ClaimedAt: nil,
+		UpdatedAt: nil,
 	}
-	_, err := s.fileMetadataRepo.InsertFileMetadata(ctx, newFileMetadata)
+	_, err = s.fileMetadataRepo.InsertFileMetadata(ctx, newFileMetadata)
 	if err != nil {
 		return err
 	}
@@ -105,12 +117,5 @@ func (s *Service) ValidateUpload(targetStorageID types.ID, mimeType string, size
 		}
 	}
 
-	return nil
-}
-
-func (s *Service) OnFileClaimed(ctx context.Context, fileKey string) error {
-
-	//todo move file to target storage
-	//todo update claimed_at of fileMetadata
 	return nil
 }

@@ -36,7 +36,7 @@ func New(cfg Config) Server {
 			return cfg.Cors.Skip
 		},
 		AllowOrigins: cfg.Cors.AllowOrigins,
-		AllowHeaders: []string{"*"},
+		//AllowHeaders: cfg.Cors.AllowHeaders,
 	}))
 
 	return Server{

@@ -36,6 +36,7 @@ func (s *Storage) GeneratePreSignedURL(storageName, key string, duration time.Du
 
 	//todo implement custom pre-signed url using database
 	url := fmt.Sprintf("http://localhost:5006/v1/files/%s/download", storageName, key)
+
 	return url, nil
 
 }
@@ -45,10 +46,36 @@ func (s *Storage) MakeStorage(ctx context.Context, name string) error {
 	newFolder := fmt.Sprintf("%s/%s", s.basePath, name)
 	err := os.MkdirAll(newFolder, 0755)
 	if err != nil {
+
 		return err
 	}
-	return nil
 
+	return nil
+}
+
+func (s *Storage) MoveFileToStorage(fileKey, fromStorageName, toStorageName string) error {
+
+	// Define the destination directory
+	destDir := fmt.Sprintf("%s/%s", s.basePath, toStorageName)
+
+	// Ensure the destination directory exists
+	err := os.MkdirAll(destDir, 0755)
+	if err != nil {
+		return fmt.Errorf("failed to create destination directory: %w", err)
+	}
+
+	sourcePath := fmt.Sprintf("%s/%s/%s", s.basePath, fromStorageName, fileKey)
+
+	destPath := fmt.Sprintf("%s/%s/%s", s.basePath, toStorageName, fileKey)
+
+	// Move the file
+	err = os.Rename(sourcePath, destPath)
+	err = os.Rename(sourcePath+".info", destPath+".info")
+	if err != nil {
+		return fmt.Errorf("failed to move file: %w", err)
+	}
+
+	return nil
 }
 
 func (s *Storage) Config() storageprovider.StorageConfig {
