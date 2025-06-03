@@ -33,10 +33,10 @@ func (r LayerRepo) HealthCheck(ctx context.Context) (string, error) {
 }
 
 func (r LayerRepo) CreateLayer(ctx context.Context, layer service.LayerEntity) (types.ID, error) {
-	query := `insert into layers(name , default_style) values($1 , $2) returning id;`
+	query := `insert into layers(name , default_style ,geom_type ) values($1 , $2 , $3) returning id;`
 
 	var id types.ID
-	err := r.PostgreSQL.QueryRowContext(ctx, query, layer.Name, layer.DefaultStyle).Scan(&id)
+	err := r.PostgreSQL.QueryRowContext(ctx, query, layer.Name, layer.DefaultStyle, layer.GeomType).Scan(&id)
 	if err != nil {
 		return 0, fmt.Errorf("failed to create layer: %w", err)
 	}
@@ -62,4 +62,14 @@ func (r LayerRepo) GetLayerByName(ctx context.Context, name string) (service.Lay
 		return service.LayerEntity{}, fmt.Errorf("failed to read layer %s: %w", name, err)
 	}
 	return layer, nil
+}
+
+func (r LayerRepo) CreateStyle(ctx context.Context, style service.StyleEntity) (types.ID, error) {
+	query := `insert into styles(file_path) values($1) returning id;`
+	var id types.ID
+	err := r.PostgreSQL.QueryRowContext(ctx, query, style.FilePath).Scan(&id)
+	if err != nil {
+		return 0, fmt.Errorf("failed to create style %s: %w", style.FilePath, err)
+	}
+	return id, nil
 }
