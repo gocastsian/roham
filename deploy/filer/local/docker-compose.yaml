@@ -17,14 +17,6 @@ services:
       - ./:/home/app
     profiles:
       - filer
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.${SERVICE_NAME}_filer.service=${SERVICE_NAME}_filer"
-      - "traefik.http.routers.${SERVICE_NAME}_filer.rule=Host(`${SERVICE_DOMAIN}`)&&PathPrefix(`/filer`)"
-      - "traefik.http.routers.${SERVICE_NAME}_filer.entrypoints=web"
-      - "traefik.http.services.${SERVICE_NAME}_filer.loadbalancer.server.port=5005"
-      - "traefik.http.routers.${SERVICE_NAME}_filer.middlewares=${SERVICE_NAME}_strip_filer"
-      - "traefik.http.middlewares.${SERVICE_NAME}_strip_filer.stripprefix.prefixes=/filer"
   filer-db:
     image: postgres:17.2-alpine
     environment:

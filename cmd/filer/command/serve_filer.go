@@ -3,6 +3,10 @@ package command
 import (
 	"context"
 	"fmt"
+	"log"
+	"os"
+	"path/filepath"
+
 	"github.com/gocastsian/roham/filer/adapter/tusdadapter"
 	"github.com/gocastsian/roham/filer/delivery/http"
 	"github.com/gocastsian/roham/filer/delivery/tus"
@@ -15,9 +19,6 @@ import (
 	"github.com/gocastsian/roham/pkg/logger"
 	"github.com/gocastsian/roham/pkg/postgresql"
 	"github.com/gocastsian/roham/pkg/postgresqlmigrator"
-	"log"
-	"os"
-	"path/filepath"
 
 	"github.com/gocastsian/roham/filer"
 	"github.com/spf13/cobra"
