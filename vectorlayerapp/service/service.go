@@ -23,6 +23,7 @@ type Repository interface {
 	CreateLayer(ctx context.Context, layer LayerEntity) (types.ID, error)
 	DropTable(ctx context.Context, tableName string) (bool, error)
 	GetLayerByName(ctx context.Context, name string) (LayerEntity, error)
+	CreateStyle(ctx context.Context, style StyleEntity) (types.ID, error)
 }
 
 type Scheduler interface {
@@ -127,13 +128,19 @@ func (s Service) ImportLayer(ctx context.Context, req ImportLayerRequest) (Impor
 	log.Printf("Unzipped files to %s", tempDir)
 
 	var shpFilePath string
+	var sldFilePath string
 	err = filepath.Walk(tempDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-		if !info.IsDir() && strings.ToLower(filepath.Ext(path)) == ".shp" {
-			shpFilePath = path
-			return filepath.SkipAll
+		if !info.IsDir() {
+			ext := strings.ToLower(filepath.Ext(path))
+			switch ext {
+			case ".shp":
+				shpFilePath = path
+			case ".sld":
+				sldFilePath = path
+			}
 		}
 		return nil
 	})
@@ -168,10 +175,24 @@ func (s Service) ImportLayer(ctx context.Context, req ImportLayerRequest) (Impor
 		return ImportLayerResponse{}, fmt.Errorf("ogr2ogr failed: %w", err)
 	}
 
+	var styleFileId types.ID
+	if sldFilePath != "" {
+		log.Printf("Found SLD file: %s", sldFilePath)
+
+		styleRes, err := s.CreateStyle(ctx, CreateStyleRequest{FilePath: sldFilePath})
+		if err != nil {
+			log.Printf("Warning: Failed to process SLD file: %v", err)
+		} else {
+			styleFileId = styleRes.ID
+			log.Printf("Style created successfully with ID: %v", styleRes)
+		}
+	}
+
 	log.Println("Shapefile imported successfully!")
 	return ImportLayerResponse{
-		Status:    true,
-		LayerName: layerName,
+		Status:      true,
+		LayerName:   layerName,
+		StyleFileID: styleFileId,
 	}, nil
 }
 
@@ -204,7 +225,8 @@ func (s Service) CreateLayer(ctx context.Context, req CreateLayerRequest) (Creat
 	if err != nil {
 		createLayer, err := s.repository.CreateLayer(ctx, LayerEntity{
 			Name:         req.LayerName,
-			DefaultStyle: "default",
+			GeomType:     req.GeomType,
+			DefaultStyle: req.DefaultStyle,
 		})
 		if err != nil {
 			return CreateLayerResponse{}, fmt.Errorf("failed to create createLayer %s: %w", req.LayerName, err)
@@ -230,4 +252,39 @@ func (s Service) DropLayerTable(ctx context.Context, req DropLayerRequest) (Drop
 		Success: res,
 	}, nil
 
+}
+
+func (s Service) CreateStyle(ctx context.Context, req CreateStyleRequest) (CreateStyleResponse, error) {
+	stylesDir := "./styles"
+
+	if err := os.MkdirAll(stylesDir, 0755); err != nil {
+		return CreateStyleResponse{}, fmt.Errorf("failed to create styles directory: %w", err)
+	}
+
+	styleFileName := fmt.Sprintf("style_%s.sld", uuid.New())
+
+	destinationPath := filepath.Join(stylesDir, styleFileName)
+
+	sldContent, err := os.ReadFile(req.FilePath)
+	if err != nil {
+		return CreateStyleResponse{}, fmt.Errorf("failed to read SLD file %s: %w", req.FilePath, err)
+	}
+
+	if err := os.WriteFile(destinationPath, sldContent, 0644); err != nil {
+		return CreateStyleResponse{}, fmt.Errorf("failed to write SLD file to %s: %w", destinationPath, err)
+	}
+
+	log.Printf("SLD file copied to: %s", destinationPath)
+
+	styleID, err := s.repository.CreateStyle(ctx, StyleEntity{
+		FilePath: destinationPath,
+	})
+	if err != nil {
+		if removeErr := os.Remove(destinationPath); removeErr != nil {
+			log.Printf("Warning: Failed to clean up file %s after database error: %v", destinationPath, removeErr)
+		}
+		return CreateStyleResponse{}, fmt.Errorf("failed to create style record in database: %w", err)
+	}
+
+	return CreateStyleResponse{ID: styleID}, nil
 }

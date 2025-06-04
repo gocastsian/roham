@@ -19,10 +19,10 @@ func New(service Service) Workflow {
 func (w Workflow) ImportLayerWorkflow(ctx workflow.Context, event job.Event) error {
 	fileKey, ok := event.Args["key"].(string)
 	if !ok {
-		_ = workflow.ExecuteActivity(ctx, w.service.UpdateJob, UpdateJobStatusRequest{
+		workflow.ExecuteActivity(ctx, w.service.UpdateJob, UpdateJobStatusRequest{
 			WorkflowId: event.WorkflowId,
 			Status:     JobStatusFailed,
-		}).Get(ctx, nil)
+		})
 	}
 
 	ao := workflow.ActivityOptions{
@@ -55,36 +55,39 @@ func (w Workflow) ImportLayerWorkflow(ctx workflow.Context, event job.Event) err
 	if err != nil {
 		errMsg := err.Error()
 
-		_ = workflow.ExecuteActivity(ctx, w.service.UpdateJob, UpdateJobStatusRequest{
+		workflow.ExecuteActivity(ctx, w.service.UpdateJob, UpdateJobStatusRequest{
 			WorkflowId: event.WorkflowId,
 			Status:     JobStatusFailed,
 			ErrorMsg:   &errMsg,
-		}).Get(ctx, nil)
+		})
 
-		_ = workflow.ExecuteActivity(ctx, w.service.SendNotification, SendNotificationRequest{
+		workflow.ExecuteActivity(ctx, w.service.SendNotification, SendNotificationRequest{
 			WorkflowId: event.WorkflowId,
 			Status:     "failed",
-		}).Get(ctx, nil)
+		})
 		logger.Error("Failed to import layer", "Error", err)
 		return err
 	}
 
 	var createLayer CreateLayerResponse
-	err = workflow.ExecuteActivity(ctx, w.service.CreateLayer, CreateLayerRequest{LayerName: importResult.LayerName}).
-		Get(ctx, &createLayer)
+	err = workflow.ExecuteActivity(ctx, w.service.CreateLayer, CreateLayerRequest{
+		LayerName:    importResult.LayerName,
+		GeomType:     "MULTIPOLYGON",
+		DefaultStyle: importResult.StyleFileID,
+	}).Get(ctx, &createLayer)
 	if err != nil {
 		errMsg := err.Error()
 
 		var dropTable DropLayerResponse
-		_ = workflow.ExecuteActivity(ctx, w.service.DropLayerTable, DropLayerRequest{TableName: importResult.LayerName}).Get(
+		workflow.ExecuteActivity(ctx, w.service.DropLayerTable, DropLayerRequest{TableName: importResult.LayerName}).Get(
 			ctx, &dropTable)
 
-		_ = workflow.ExecuteActivity(ctx, w.service.UpdateJob, UpdateJobStatusRequest{
+		workflow.ExecuteActivity(ctx, w.service.UpdateJob, UpdateJobStatusRequest{
 			WorkflowId: event.WorkflowId,
 			Status:     JobStatusFailed,
 			ErrorMsg:   &errMsg,
 		})
-		_ = workflow.ExecuteActivity(ctx, w.service.SendNotification, SendNotificationRequest{
+		workflow.ExecuteActivity(ctx, w.service.SendNotification, SendNotificationRequest{
 			WorkflowId: event.WorkflowId,
 			Status:     "failed",
 		})

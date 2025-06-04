@@ -20,8 +20,9 @@ type ImportLayerRequest struct {
 	FileKey string
 }
 type ImportLayerResponse struct {
-	Status    bool
-	LayerName string
+	Status      bool
+	LayerName   string
+	StyleFileID types.ID
 }
 
 // ==========================================================
@@ -34,7 +35,9 @@ type SendNotificationResponse struct{}
 
 // ==========================================================
 type CreateLayerRequest struct {
-	LayerName string
+	LayerName    string
+	GeomType     string
+	DefaultStyle types.ID
 }
 type CreateLayerResponse struct {
 	ID types.ID
@@ -46,4 +49,12 @@ type DropLayerRequest struct {
 }
 type DropLayerResponse struct {
 	Success bool
+}
+
+// ==========================================================
+type CreateStyleRequest struct {
+	FilePath string
+}
+type CreateStyleResponse struct {
+	ID types.ID
 }
