@@ -3,27 +3,26 @@ package filer
 import (
 	"context"
 	"fmt"
-	"github.com/gocastsian/roham/filer/adapter/tusdadapter"
-	"github.com/gocastsian/roham/filer/delivery/http"
-	"github.com/gocastsian/roham/filer/delivery/tus"
-	"github.com/gocastsian/roham/filer/service/filestorage"
-	"github.com/gocastsian/roham/pkg/postgresql"
 	"log/slog"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
+
+	"github.com/gocastsian/roham/filer/adapter/tusdadapter"
+	"github.com/gocastsian/roham/filer/delivery/http"
+	"github.com/gocastsian/roham/filer/delivery/tus"
+	"github.com/gocastsian/roham/filer/service/filestorage"
 )
 
 type Application struct {
-	ShutdownCtx  context.Context
-	Config       *Config
-	Logger       *slog.Logger
-	storageSvc   filestorage.Service
-	httpHandler  http.Handler
+	ShutdownCtx context.Context
+	Config      *Config
+	Logger      *slog.Logger
+	storageSvc  filestorage.Service
+	// httpHandler  http.Handler
 	HTTPServer   http.Server
 	UploadServer tus.Server
-	postgresConn *postgresql.Database
 }
 
 func Setup(ctx context.Context, cfg *Config, logger *slog.Logger, httpServer http.Server, uploadServer tus.Server, storageSvc filestorage.Service) Application {
@@ -50,7 +49,7 @@ func (app Application) Start() {
 		defer wg.Done()
 		app.Logger.Info(fmt.Sprintf("HTTP server started on %d", app.Config.HTTPServer.Port))
 		if err := app.HTTPServer.Serve(); err != nil {
-			app.Logger.Error(fmt.Sprintf("error in HTTP server on %d", app.Config.HTTPServer.Port), err)
+			app.Logger.Info(fmt.Sprintf("error in HTTP server on %d", app.Config.HTTPServer.Port))
 		}
 		app.Logger.Info(fmt.Sprintf("HTTP server stopped %d", app.Config.HTTPServer.Port))
 	}()
@@ -61,7 +60,7 @@ func (app Application) Start() {
 		defer wg.Done()
 		app.Logger.Info(fmt.Sprintf("Upload server started on %d", app.Config.Uploader.HTTPServer.Port))
 		if err := app.UploadServer.Serve(); err != nil {
-			app.Logger.Error(fmt.Sprintf("error in HTTP server on %d", app.Config.Uploader.HTTPServer.Port), err)
+			app.Logger.Error(fmt.Sprintf("error in HTTP server on %d", app.Config.Uploader.HTTPServer.Port))
 		}
 		app.Logger.Info(fmt.Sprintf("HTTP server stopped %d", app.Config.Uploader.HTTPServer.Port))
 	}()
@@ -87,8 +86,7 @@ func (app Application) Start() {
 				go func(ctx context.Context, i filestorage.CreateFileMetadataInput) {
 					err := app.UploadServer.Handler.UploadService.OnCompletedUploads(ctx, i)
 					if err != nil {
-						app.Logger.Error("Unable to handle OnCompletedUploads: %s", err.Error())
-
+						app.Logger.Error(fmt.Sprintf("Unable to handle OnCompletedUploads: %s", err.Error()))
 					}
 				}(ctx, input)
 			}

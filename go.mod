@@ -7,7 +7,6 @@ require (
 	github.com/aws/aws-sdk-go v1.55.7
 	github.com/bdragon300/tusgo v0.1.2
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
-	github.com/go-sql-driver/mysql v1.6.0
 	github.com/google/uuid v1.6.0
 	github.com/knadh/koanf/parsers/yaml v0.1.0
 	github.com/knadh/koanf/providers/env v1.0.0
