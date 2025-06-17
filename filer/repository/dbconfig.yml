@@ -1,5 +1,4 @@
 development:
   dialect: postgres
-  datasource: host=localhost dbname=filer user=roham password=secret sslmode=disable
   dir: migrations
   table: migrations

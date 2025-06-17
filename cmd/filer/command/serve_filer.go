@@ -41,7 +41,7 @@ func serveFiler() {
 		fmt.Printf("Error getting current working directory: %v", err)
 	}
 
-	environment := os.Getenv("ENVIRONMENT")
+	environment := os.Getenv("ENV")
 	if environment == "" {
 		environment = "local"
 	}

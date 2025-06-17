@@ -10,9 +10,10 @@ services:
     env_file:
       - ./deploy/.env
     entrypoint:
-      - air
-      - "-c"
-      - /home/app/.air/.air.filer.toml
+      - go
+      - run
+      - 'cmd/filer/main.go'
+      - serve
     volumes:
       - ./:/home/app
     profiles:
@@ -28,6 +29,8 @@ services:
       - "traefik.http.services.${SERVICE_NAME}_filer.loadbalancer.server.port=5005"
       - "traefik.http.routers.${SERVICE_NAME}_filer.middlewares=${SERVICE_NAME}_strip_filer"
       - "traefik.http.middlewares.${SERVICE_NAME}_strip_filer.stripprefix.prefixes=/filer"
+    environment:
+      ENV: "development"
   filer-db:
     image: postgres:17.2-alpine
     environment:
@@ -52,5 +55,5 @@ services:
 #      - "9001:9001"
 #    profiles:
 #      - filer
-volumes:
-  minio-data:
+#volumes:
+#  minio-data:

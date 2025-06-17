@@ -14,8 +14,8 @@ logger:
   file_max_age_in_days: 1
 
 postgres_db:
-  host: localhost
-  port: 5433
+  host: filer-db
+  port: 5432
   user: "roham"
   password: "secret"
   db_name: filer_db
