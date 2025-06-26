@@ -35,7 +35,7 @@ func (s *Storage) GetFile(ctx context.Context, storageName, fileKey string) (io.
 func (s *Storage) GeneratePreSignedURL(storageName, key string, duration time.Duration) (string, error) {
 
 	//todo implement custom pre-signed url using database
-	url := fmt.Sprintf("http://localhost:5006/v1/files/%s/download", storageName, key)
+	url := fmt.Sprintf("http://localhost:5006/v1/files/%s/download", storageName+":"+key)
 
 	return url, nil
 
@@ -70,6 +70,10 @@ func (s *Storage) MoveFileToStorage(fileKey, fromStorageName, toStorageName stri
 
 	// Move the file
 	err = os.Rename(sourcePath, destPath)
+	if err != nil {
+		return fmt.Errorf("failed to move file: %w", err)
+	}
+
 	err = os.Rename(sourcePath+".info", destPath+".info")
 	if err != nil {
 		return fmt.Errorf("failed to move file: %w", err)

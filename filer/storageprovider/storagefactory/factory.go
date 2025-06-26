@@ -1,7 +1,6 @@
 package storagefactory
 
 import (
-	"errors"
 	"fmt"
 	"github.com/gocastsian/roham/filer/storageprovider"
 	"github.com/gocastsian/roham/filer/storageprovider/filestorage"
@@ -17,5 +16,5 @@ func New(cfg storageprovider.StorageConfig) (storageprovider.Provider, error) {
 		return s3storage.New(cfg)
 	}
 
-	return nil, errors.New(fmt.Sprintf("Invalid storage type: %s", cfg.Type))
+	return nil, fmt.Errorf("invalid storage type: %s", cfg.Type)
 }

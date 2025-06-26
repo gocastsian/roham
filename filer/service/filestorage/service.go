@@ -29,6 +29,7 @@ type FileMetadataRepo interface {
 
 func NewStorageService(l *slog.Logger, p storageprovider.Provider, fr FileMetadataRepo, r StorageRepository) Service {
 	return Service{
+		logger:          l,
 		storageProvider: p,
 		fileRepo:        fr,
 		storageRepo:     r,
