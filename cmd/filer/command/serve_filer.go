@@ -3,14 +3,22 @@ package command
 import (
 	"context"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/gocastsian/roham/filer/adapter/s3adapter"
-	cfgloader "github.com/gocastsian/roham/pkg/cfg_loader"
-	"github.com/gocastsian/roham/pkg/logger"
 	"log"
 	"os"
 	"path/filepath"
+
+	"github.com/gocastsian/roham/filer/adapter/tusdadapter"
+	"github.com/gocastsian/roham/filer/delivery/http"
+	"github.com/gocastsian/roham/filer/delivery/tus"
+	"github.com/gocastsian/roham/filer/repository"
+	"github.com/gocastsian/roham/filer/service/filestorage"
+	"github.com/gocastsian/roham/filer/service/upload"
+	"github.com/gocastsian/roham/filer/storageprovider/storagefactory"
+	cfgloader "github.com/gocastsian/roham/pkg/cfg_loader"
+	httpserver "github.com/gocastsian/roham/pkg/http_server"
+	"github.com/gocastsian/roham/pkg/logger"
+	"github.com/gocastsian/roham/pkg/postgresql"
+	"github.com/gocastsian/roham/pkg/postgresqlmigrator"
 
 	"github.com/gocastsian/roham/filer"
 	"github.com/spf13/cobra"
@@ -33,7 +41,7 @@ func serveFiler() {
 		fmt.Printf("Error getting current working directory: %v", err)
 	}
 
-	environment := os.Getenv("ENVIRONMENT")
+	environment := os.Getenv("ENV")
 	if environment == "" {
 		environment = "local"
 	}
@@ -58,22 +66,38 @@ func serveFiler() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	awsConfig := aws.NewConfig().
-		WithRegion("ir").
-		WithEndpoint(cfg.MinioStorage.Endpoint).
-		WithCredentials(credentials.NewStaticCredentials(
-			cfg.MinioStorage.AccessKey,
-			cfg.MinioStorage.SecretKey,
-			"", // Leave empty unless using STS/OpenID
-		)).
-		WithS3ForcePathStyle(true).
-		WithDisableSSL(true)
-
-	s3Adapter, err := s3adapter.New(awsConfig)
+	postgresConn, err := postgresql.Connect(cfg.PostgresDB)
 	if err != nil {
-		log.Fatalf("Failed to create AWS session: %s", err)
+		log.Fatalf("Failed to connect PostgresDB: %s", err)
 	}
 
-	app := filer.Setup(ctx, &cfg, appLogger, s3Adapter)
+	mgr := postgresqlmigrator.New(cfg.PostgresDB, cfg.PostgresDB.PathOfMigration)
+	mgr.Up()
+
+	defer postgresql.Close(postgresConn.DB)
+
+	fileRepo := repository.NewFileMetadataRepo(appLogger, postgresConn.DB)
+	storageRepo := repository.NewStorageRepo(appLogger, postgresConn.DB)
+
+	storageProvider, err := storagefactory.New(cfg.Storage)
+	if err != nil {
+		log.Fatalf("Failed to create storage provider: %s", err)
+	}
+
+	storageService := filestorage.NewStorageService(appLogger, storageProvider, fileRepo, storageRepo)
+	handler := http.NewHandler(storageService)
+	httpServer := http.New(httpserver.New(cfg.HTTPServer), handler, appLogger)
+
+	// Setup UploadServer
+	uploadService := upload.NewUploadService(appLogger, storageProvider, fileRepo, storageRepo)
+	tusHandler, err := tusdadapter.New(storageProvider, &uploadService)
+	if err != nil {
+		log.Fatalf("Failed to create tus handler for storage type %s: %v", cfg.Storage.Type, err)
+	}
+
+	uploadHandler := tus.NewHandler(uploadService, tusHandler)
+	uploadServer := tus.NewServer(appLogger, httpserver.New(cfg.Uploader.HTTPServer), uploadHandler)
+
+	app := filer.Setup(ctx, &cfg, appLogger, httpServer, uploadServer, storageService)
 	app.Start()
 }

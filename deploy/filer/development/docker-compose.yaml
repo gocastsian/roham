@@ -10,15 +10,17 @@ services:
     env_file:
       - ./deploy/.env
     entrypoint:
-      - air
-      - "-c"
-      - /home/app/.air/.air.filer.toml
+      - go
+      - run
+      - 'cmd/filer/main.go'
+      - serve
     volumes:
       - ./:/home/app
     profiles:
       - filer
     ports:
       - "5005:5005"
+      - "5006:5006"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.${SERVICE_NAME}_filer.service=${SERVICE_NAME}_filer"
@@ -27,18 +29,31 @@ services:
       - "traefik.http.services.${SERVICE_NAME}_filer.loadbalancer.server.port=5005"
       - "traefik.http.routers.${SERVICE_NAME}_filer.middlewares=${SERVICE_NAME}_strip_filer"
       - "traefik.http.middlewares.${SERVICE_NAME}_strip_filer.stripprefix.prefixes=/filer"
-  minio:
-    image: minio/minio:latest
     environment:
-      - MINIO_ROOT_USER=minioadmin
-      - MINIO_ROOT_PASSWORD=minioadmin
-    volumes:
-      - minio-data:/data
-    command: server /data --console-address ":9001"
-    ports:
-      - "9000:9000"
-      - "9001:9001"
+      ENV: "development"
+  filer-db:
+    image: postgres:17.2-alpine
+    environment:
+      - 'POSTGRES_DB=filer_db'
+      - 'POSTGRES_USER=roham'
+      - 'POSTGRES_PASSWORD=secret'
+    restart: always
     profiles:
       - filer
-volumes:
-  minio-data:
+    ports:
+      - "5433:5432"
+#  minio:
+#    image: minio/minio:latest
+#    environment:
+#      - MINIO_ROOT_USER=minioadmin
+#      - MINIO_ROOT_PASSWORD=minioadmin
+#    volumes:
+#      - minio-data:/data
+#    command: server /data --console-address ":9001"
+#    ports:
+#      - "9000:9000"
+#      - "9001:9001"
+#    profiles:
+#      - filer
+#volumes:
+#  minio-data:
