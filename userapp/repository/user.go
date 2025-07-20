@@ -7,6 +7,7 @@ import (
 	"github.com/gocastsian/roham/types"
 	"github.com/gocastsian/roham/userapp/service/user"
 	"log/slog"
+	"strings"
 )
 
 type Config struct {
@@ -252,4 +253,60 @@ func (repo UserRepo) UpdateAvatar(ctx context.Context, ID types.ID, uploadAddres
 	}
 
 	return nil
+}
+
+func (repo UserRepo) UpdateUserInfo(ctx context.Context, userInfo user.UpdateUserInfoRequest) error {
+	query := "UPDATE users SET"
+	params := []interface{}{}
+	paramCount := 1
+	updates := []string{}
+
+	if userInfo.Username != "" {
+		updates = append(updates, fmt.Sprintf(" username = $%d", paramCount))
+		params = append(params, userInfo.Username)
+		paramCount++
+	}
+	if userInfo.FirstName != "" {
+		updates = append(updates, fmt.Sprintf(" first_name = $%d", paramCount))
+		params = append(params, userInfo.FirstName)
+		paramCount++
+	}
+	if userInfo.LastName != "" {
+		updates = append(updates, fmt.Sprintf(" last_name = $%d", paramCount))
+		params = append(params, userInfo.LastName)
+		paramCount++
+	}
+	if userInfo.Email != "" {
+		updates = append(updates, fmt.Sprintf(" email = $%d", paramCount))
+		params = append(params, userInfo.Email)
+		paramCount++
+	}
+
+	// If no fields to update, return early
+	if len(updates) == 0 {
+		return nil
+	}
+
+	// Join all update clauses
+	query += strings.Join(updates, ",")
+
+	// Add WHERE clause with the next parameter number
+	query += fmt.Sprintf(" WHERE id = $%d", paramCount)
+	params = append(params, userInfo.ID)
+
+	// Execute the query
+	result, err := repo.PostgreSQL.ExecContext(ctx, query, params...)
+	if err != nil {
+		return fmt.Errorf("failed to execute statement: %w", err)
+	}
+	if rowsAffected, err := result.RowsAffected(); err != nil {
+		return fmt.Errorf("failed to execute statement: %w", err)
+	} else {
+		if rowsAffected != 1 {
+			return fmt.Errorf("failed to update the user info")
+		}
+	}
+
+	return nil
+
 }

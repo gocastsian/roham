@@ -47,3 +47,15 @@ type RegisterRequest struct {
 	Password        string `json:"password"`
 	ConfirmPassword string `json:"confirm_password"`
 }
+
+type UpdateUserInfoRequest struct {
+	ID        types.ID `json:"user_id"`
+	Username  string   `json:"username"`
+	FirstName string   `json:"first_name"`
+	LastName  string   `json:"last_name"`
+	Email     string   `json:"email"`
+}
+
+type UpdateUserInfoResponse struct {
+	Success bool `json:"success"`
+}

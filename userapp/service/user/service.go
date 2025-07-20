@@ -23,6 +23,7 @@ type Repository interface {
 	CheckUserUniquness(ctx context.Context, email string, username string) (bool, error)
 	GetUser(ctx context.Context, ID types.ID) (User, error)
 	UpdateAvatar(ctx context.Context, ID types.ID, uploadAddress string) error
+	UpdateUserInfo(ctx context.Context, userInfo UpdateUserInfoRequest) error
 }
 type Avatar struct {
 	FileHandler *multipart.FileHeader
@@ -261,4 +262,22 @@ func (srv Service) createFile(dstAddress string) (*os.File, error) {
 	}
 
 	return dst, nil
+}
+
+func (srv Service) UpdateUserInfo(ctx context.Context, updateReq UpdateUserInfoRequest) (UpdateUserInfoResponse, error) {
+	if err := srv.validator.ValidateUpdateUserInfo(updateReq); err != nil {
+		return UpdateUserInfoResponse{Success: false}, err
+	}
+
+	if err := srv.repository.UpdateUserInfo(ctx, updateReq); err != nil {
+		return UpdateUserInfoResponse{Success: false}, errmsg.ErrorResponse{
+			Message: "update user info failed",
+			Errors:  map[string]interface{}{"user_UpdateUserInfo": err.Error()},
+		}
+	}
+
+	response := UpdateUserInfoResponse{
+		Success: true,
+	}
+	return response, nil
 }

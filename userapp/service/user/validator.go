@@ -142,6 +142,36 @@ func validateStrongPassword(value interface{}) error {
 	return nil
 }
 
+func (v Validator) ValidateUpdateUserInfo(updateUserInfoReq UpdateUserInfoRequest) error {
+	firstnameErr := v.ValidateFirstName(updateUserInfoReq.FirstName)
+	lastnameErr := v.ValidateLastName(updateUserInfoReq.LastName)
+	emailErr := v.ValidateEmail(updateUserInfoReq.Email)
+	usernameErr := v.ValidateUsername(updateUserInfoReq.Username)
+
+	errorsMap := make(map[string]interface{})
+	if usernameErr != nil {
+		errorsMap["username"] = usernameErr.Error()
+	}
+	if firstnameErr != nil {
+		errorsMap["firstName"] = firstnameErr.Error()
+	}
+	if lastnameErr != nil {
+		errorsMap["lastName"] = lastnameErr.Error()
+	}
+	if emailErr != nil {
+		errorsMap["email"] = emailErr.Error()
+	}
+	if firstnameErr != nil || lastnameErr != nil || emailErr != nil || usernameErr != nil {
+		return errmsg.ErrorResponse{
+			Message:         "user validation has error",
+			Errors:          errorsMap,
+			InternalErrCode: statuscode.IntCodeValidation,
+		}
+	}
+
+	return nil
+}
+
 func (v Validator) ValidateRegistration(registerReq RegisterRequest) error {
 	firstnameErr := v.ValidateFirstName(registerReq.FirstName)
 	lastnameErr := v.ValidateLastName(registerReq.LastName)

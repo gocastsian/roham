@@ -226,3 +226,25 @@ func (h Handler) UploadAvatar(c echo.Context) error {
 	return c.NoContent(http.StatusOK)
 
 }
+
+func (h Handler) UpdateUserInfo(c echo.Context) error {
+	var request user.UpdateUserInfoRequest
+
+	if err := c.Bind(&request); err != nil {
+		return c.JSON(http.StatusBadRequest, errmsg.ErrorResponse{Message: err.Error()})
+	}
+
+	response, err := h.UserService.UpdateUserInfo(c.Request().Context(), request)
+	if err != nil {
+
+		return c.JSON(statuscode.MapToHTTPStatusCode(err.(errmsg.ErrorResponse)), map[string]interface{}{
+			"message": err.Error(),
+			"errors":  err.(errmsg.ErrorResponse).Errors,
+		})
+	}
+
+	return c.JSON(http.StatusCreated, map[string]interface{}{
+		"message":  "user info updated successfully",
+		"response": response,
+	})
+}
