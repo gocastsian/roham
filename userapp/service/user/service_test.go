@@ -56,6 +56,11 @@ func (m *MockRepository) UpdateAvatar(ctx context.Context, ID types.ID, uploadAd
 	return args.Error(0)
 }
 
+func (m *MockRepository) UpdateUserInfo(ctx context.Context, userInfo user.UpdateUserInfoRequest) error {
+	args := m.Called(ctx, userInfo)
+	return args.Error(0)
+}
+
 type mockMultipartFile struct {
 	*bytes.Reader
 }
@@ -284,4 +289,26 @@ func TestUpdateUserAvatar(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestUpdateUserInfo(t *testing.T) {
+	mockRepo := new(MockRepository)
+	userConf := user.Config{}
+	userValidator := user.NewValidator(mockRepo)
+	service := user.NewService(mockRepo, userValidator, nil, nil, userConf)
+
+	req := user.UpdateUserInfoRequest{
+		ID:        1,
+		Username:  "test_username",
+		FirstName: "test",
+		LastName:  "test",
+		Email:     "test@email.com",
+	}
+
+	resp, err := service.UpdateUserInfo(context.Background(), req)
+
+	mockRepo.On("UpdateUserInfo", mock.Anything, req).Return(nil).Once()
+	require.NoError(t, err)
+	assert.Equal(t, true, resp.Success)
+
 }
