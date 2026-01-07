@@ -13,12 +13,16 @@ logger:
   file_max_size_in_mb: 10
   file_max_age_in_days: 1
 
+# Database configuration
+# Sensitive values (host, user, password, db_name) come from environment variables in deploy/.env
+# Set: FILER__POSTGRES_DB__HOST, FILER__POSTGRES_DB__USER, FILER__POSTGRES_DB__PASSWORD, FILER__POSTGRES_DB__DB_NAME
+# Defaults below are overridden by environment variables if set
 postgres_db:
-  host: filer-db
-  port: 5432
-  user: "roham"
-  password: "secret"
-  db_name: filer_db
+  host: filer-db  # Overridden by FILER__POSTGRES_DB__HOST env var
+  port: 5432      # Overridden by FILER__POSTGRES_DB__PORT env var
+  user: roham     # Overridden by FILER__POSTGRES_DB__USER env var
+  password: secret  # Overridden by FILER__POSTGRES_DB__PASSWORD env var
+  db_name: filer_db  # Overridden by FILER__POSTGRES_DB__DB_NAME env var
   ssl_mode: disable
   max_idle_conns: 15
   max_open_conns: 100

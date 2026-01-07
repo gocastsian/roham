@@ -1,13 +1,14 @@
 package temporal
 
 import (
-	"go.temporal.io/sdk/client"
 	"log"
+
+	"go.temporal.io/sdk/client"
 )
 
 type Config struct {
-	Namespace           string `json:"namespace"`
-	TemporalHostPort    string `json:"temporal_host_port"`
+	Namespace           string `koanf:"namespace"`
+	TemporalHostPort    string `koanf:"temporal_host_port"`
 	StartToCloseTimeout uint64 `koanf:"start_to_close_timeout"`
 	InitialInterval     uint64 `koanf:"initial_interval"`
 	BackoffCoefficient  uint64 `koanf:"backoff_coefficient"`

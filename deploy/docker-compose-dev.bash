@@ -6,4 +6,5 @@ docker compose \
 -f ./deploy/roham/development/traefik-compose.yaml \
 -f ./deploy/user/development/docker-compose.yaml \
 -f ./deploy/filer/development/docker-compose.yaml \
+-f ./deploy/vectorlayer/development/docker-compose.yaml \
  "$@"

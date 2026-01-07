@@ -9,7 +9,7 @@ CREATE TABLE file_metadata
     mime_type  VARCHAR(255) NOT NULL,
     file_size  BIGINT       NOT NULL,
     created_at TIMESTAMPTZ  NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ  NOT NULL DEFAULT now()
 );
 
 CREATE INDEX idx_file_metadata_storage_id ON file_metadata (storage_id);
