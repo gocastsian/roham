@@ -15,24 +15,41 @@ cache_config:
   ttl: "24h"
   write_ttl: "10s"
 
+# Database configuration
+# Sensitive values (host, user, password, db_name) come from environment variables in deploy/.env
+# Set: VECTORLAYER__POSTGRES_DB__HOST, VECTORLAYER__POSTGRES_DB__USER, VECTORLAYER__POSTGRES_DB__PASSWORD, VECTORLAYER__POSTGRES_DB__DB_NAME
+# Defaults below are overridden by environment variables if set
 postgres_db:
-  host: vectorlayer-db
-  port: 5432
-  user: "vectorlayer_admin"
-  password: "password123"
-  db_name: vectorlayer_db
+  host: vectorlayer-db  # Overridden by VECTORLAYER__POSTGRES_DB__HOST env var
+  port: 5432            # Overridden by VECTORLAYER__POSTGRES_DB__PORT env var
+  user: vectorlayer_admin  # Overridden by VECTORLAYER__POSTGRES_DB__USER env var
+  password: password123    # Overridden by VECTORLAYER__POSTGRES_DB__PASSWORD env var
+  db_name: vectorlayer_db  # Overridden by VECTORLAYER__POSTGRES_DB__DB_NAME env var
   ssl_mode: disable
   max_idle_conns: 15
   max_open_conns: 100
   conn_max_lifetime: 5
   path_of_migration: './vectorlayerapp/repository/migrations'
 
+# Redis configuration
+# Values come from environment variables in deploy/.env
+# Set: VECTORLAYER__REDIS__HOST, VECTORLAYER__REDIS__PORT
+# Defaults below are overridden by environment variables if set
 redis:
-  host: user-redis
-  Port: 6379
+  host: vectorlayer-redis  # Overridden by VECTORLAYER__REDIS__HOST env var
+  Port: 6379               # Overridden by VECTORLAYER__REDIS__PORT env var
 
 logger:
   file_path: "logs/vectorlayer/service.log"
   use_local_time: true
   file_max_size_in_mb: 10
   file_max_age_in_days: 7
+
+temporal:
+  namespace: "default"
+  temporal_host_port: "vectorlayer-temporal:7233"
+  start_to_close_timeout: 60
+  initial_interval: 1
+  backoff_coefficient: 2
+  maximum_interval: 60
+  maximum_attempts: 3

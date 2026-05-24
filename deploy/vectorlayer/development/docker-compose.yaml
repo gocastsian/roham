@@ -2,14 +2,14 @@ services:
   vectorlayer-db:
     image: postgres:17.2-alpine
     environment:
-      - 'POSTGRES_DB=vectorlayer_db'
-      - 'POSTGRES_USER=vectorlayer_admin'
-      - 'POSTGRES_PASSWORD=password123'
+      - POSTGRES_DB=${VECTORLAYER_DB_NAME}
+      - POSTGRES_USER=${VECTORLAYER_DB_USER}
+      - POSTGRES_PASSWORD=${VECTORLAYER_DB_PASSWORD}
     restart: always
     profiles:
       - vectorlayer
-    ports:
-      - "5434:5432"
+    networks:
+      - roham_network
 
   vectorlayer-redis:
     image: redis:8.0-M03-alpine3.21
@@ -19,17 +19,21 @@ services:
       - ALLOW_EMPTY_PASSWORD=yes
     profiles:
       - vectorlayer
+    networks:
+      - roham_network
 
   vectorlayer-service:
     build:
       context: .
-      dockerfile: ./Dockerfile
+      dockerfile: ./deploy/vectorlayer/development/Dockerfile
       args:
         GO_IMAGE_NAME: ${GO_IMAGE_NAME}
         GO_IMAGE_VERSION: ${GO_IMAGE_VERSION}
     image: ${SERVICE_NAME}-vectorlayer:${GO_IMAGE_NAME}-${GO_IMAGE_VERSION}
     env_file:
-      - .env
+      - ./deploy/.env
+    environment:
+      GOFLAGS: "-buildvcs=false"
     entrypoint:
       - air
       - "-c"
@@ -46,3 +50,20 @@ services:
       - "traefik.http.routers.${SERVICE_NAME}_vectorlayer.entrypoints=web"
       - "traefik.http.services.${SERVICE_NAME}_vectorlayer.loadbalancer.server.port=5002"
       - "traefik.http.middlewares.${SERVICE_NAME}_strip_vectorlayer.stripprefix.prefixes=/vectorlayer"
+    networks:
+      - roham_network
+
+  vectorlayer-temporal:
+    image: temporalio/temporal:latest
+    command: ["server", "start-dev", "--ip", "0.0.0.0"]
+    profiles:
+      - vectorlayer
+    ports:
+      - "7233:7233"   # gRPC for SDKs/workers
+      - "8233:8233"   # Web UI for start-dev
+    networks:
+      - roham_network
+
+networks:
+  roham_network:
+    name: roham_network

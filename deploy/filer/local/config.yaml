@@ -15,7 +15,7 @@ logger:
 
 postgres_db:
   host: localhost
-  port: 5433
+  port: 5432
   user: "roham"
   password: "secret"
   db_name: filer_db

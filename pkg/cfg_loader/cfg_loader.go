@@ -26,10 +26,11 @@ func defaultCallbackEnv(source, prefix, separator string) string {
 }
 
 // Load function loads configuration from YAML file and environment variables based on provided options
+// YAML is loaded first (defaults), then environment variables override (env vars take precedence)
 func Load(options Option, config interface{}) error {
 	k := koanf.New(options.Delimiter)
 
-	// Load configuration from YAML file if provided
+	// Load configuration from YAML file first (defaults/fallback)
 	if options.YamlFilePath != "" {
 			if err := k.Load(file.Provider(options.YamlFilePath), yaml.Parser()); err != nil {
 					log.Fatalf("Error loading config file: %v", err)
@@ -46,7 +47,7 @@ func Load(options Option, config interface{}) error {
 			}
 	}
 
-	// Load environment variables with the specified prefix and callback
+	// Load environment variables second (overrides YAML - env vars take precedence)
 	if err := k.Load(env.Provider(options.Prefix, options.Delimiter, callback), nil); err != nil {
 			log.Fatalf("Error loading environment variables: %v", err)
 			return err

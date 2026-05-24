@@ -2,7 +2,7 @@ root = "."
 tmp_dir = "cmd/user/temp"
 
 [build]
-  bin = "./cmd/user/temp/main serve"
+  bin = "./cmd/user/temp/main"
   cmd = "go build -o ./cmd/user/temp/main ./cmd/user/"
   delay = 1000
   exclude_dir = ["vendor"]

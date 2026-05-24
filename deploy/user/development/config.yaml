@@ -15,21 +15,29 @@ cache_config:
   ttl: "24h"
   write_ttl: "10s"
 
+# Database configuration
+# Sensitive values (host, user, password, db_name) come from environment variables in deploy/.env
+# Set: USER__POSTGRES_DB__HOST, USER__POSTGRES_DB__USER, USER__POSTGRES_DB__PASSWORD, USER__POSTGRES_DB__DB_NAME
+# Defaults below are overridden by environment variables if set
 postgres_db:
-  host: user-db
-  port: 5432
-  user: "user_admin"
-  password: "password123"
-  db_name: user_db
+  host: user-db  # Overridden by USER__POSTGRES_DB__HOST env var
+  port: 5432     # Overridden by USER__POSTGRES_DB__PORT env var
+  user: user_admin  # Overridden by USER__POSTGRES_DB__USER env var
+  password: password123  # Overridden by USER__POSTGRES_DB__PASSWORD env var
+  db_name: user_db  # Overridden by USER__POSTGRES_DB__DB_NAME env var
   ssl_mode: disable
   max_idle_conns: 15
   max_open_conns: 100
   conn_max_lifetime: 5
   path_of_migration: './userapp/repository/migrations'
 
+# Redis configuration
+# Values come from environment variables in deploy/.env
+# Set: USER__REDIS__HOST, USER__REDIS__PORT
+# Defaults below are overridden by environment variables if set
 redis:
-  host: user-redis
-  Port: 6379
+  host: user-redis  # Overridden by USER__REDIS__HOST env var
+  Port: 6379        # Overridden by USER__REDIS__PORT env var
 
 logger:
   file_path: "logs/user/service.log"

@@ -26,8 +26,6 @@ services:
     restart: always
     profiles:
       - filer
-    ports:
-      - "5433:5432"
   minio:
     image: minio/minio:latest
     environment:

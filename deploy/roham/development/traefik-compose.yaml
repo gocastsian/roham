@@ -7,3 +7,10 @@ services:
     volumes:
       - ./deploy/roham/development/traefik:/etc/traefik/
       - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - roham_network
+
+networks:
+  roham_network:
+    name: roham_network
+    driver: bridge
